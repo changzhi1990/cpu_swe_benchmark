@@ -48,6 +48,34 @@ Use `successful_agent_total_tokens_total` as the standard CSV field for successf
 When reporting watt-normalized metrics, state whether the denominator is average GPU power, CPU package power,
 or average system power, and measure it over the same batch window as `batch_wall_time_seconds`.
 
+## Standard Bar Chart Reporting
+
+When asked to visualize agent-point benchmark results, use `global_metrics.csv as the raw source`.
+Do not treat ad-hoc Excel workbooks as canonical inputs; they may be reference material only.
+
+Generate one bar chart for each of these `global_metrics.csv` fields:
+
+- `batch_wall_time_seconds`
+- `throughput_successful_tasks_per_sec`
+- `E2E_p90_seconds`
+- `avg_llm_time_seconds_per_task`
+- `successful_agent_total_tokens_per_sec`
+
+Use the `concurrency` field as the x-axis agent point and label points as `c<N>`.
+If the table has `server_name`, use it as the preferred server dimension. When `server_name` is absent but multiple
+servers are being compared, add a server label from the server profile or runset identity before concatenating
+multiple `global_metrics.csv` files. If the combined data has multiple servers, draw grouped bars for each
+agent point with one color per server and a visible legend. If there is only one server, draw one bar per agent point.
+
+If multiple rows exist for the same server and `concurrency` because of repeats, aggregate numeric metric values by
+mean before plotting and write the aggregated plotting data to `plot_data_mean_by_server_concurrency.csv`. If the
+user explicitly requests per-repeat bars, skip aggregation for that view and label repeats as `c<N>-r<M>` using the
+`repeat` field.
+
+Write chart outputs under the runset directory in `bar_charts/`: one PNG per metric and, when practical, a combined
+multi-page PDF containing the same five charts. Include `server_name`/server legend information in the figure when
+more than one server is present.
+
 ## Memory Bandwidth Collector Selection
 
 The benchmark memory bandwidth sampler supports both AMD and Intel hosts:
@@ -70,7 +98,8 @@ Use `AMDUPROFPCM_SUDO_PASSWORD` only in the current shell for unattended samplin
 7. Run the requested sweep with `scripts/run_benchmark_sweep.sh` from this skill or with `benchmark_latency.py` directly.
 8. Wait for completion; do not report success before verification.
 9. Summarize runsets with `scripts/aggregate_standard_metrics.py` so `global_metrics.csv`, `cpu_metrics.csv`, `gpu_metrics.csv`, and `vllm_metrics.csv` exist.
-10. Report output directory, log path, success rates, E2E p90, TTFT p90, TPOT p90, run results, and relevant system metrics.
+10. When charts are requested, generate standard bar charts from `global_metrics.csv` using the Standard Bar Chart Reporting rules.
+11. Report output directory, log path, success rates, E2E p90, TTFT p90, TPOT p90, run results, chart paths when generated, and relevant system metrics.
 
 ## Useful Commands
 
@@ -120,6 +149,7 @@ Before claiming a benchmark run is complete, verify:
 - memory bandwidth fields are present when the AMD/Intel memory-bandwidth sampler ran
 - AVT effective-frequency fields are present in `cpu_metrics.csv` when AVT sampling ran
 - CPU, GPU, vLLM, and general benchmark fields are all present in `global_metrics.csv`
+- requested bar charts are generated from `global_metrics.csv`, include the five standard chart metrics, and use grouped bars with server labels when multiple servers are present
 - benchmark log has no traceback, connection refused, EngineDeadError, CUDA OOM, or unexpected failures
 - model and dashboard metrics endpoints are reachable if expected to remain up
 
