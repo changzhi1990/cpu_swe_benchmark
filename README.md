@@ -79,6 +79,28 @@ The root output directory also gets:
 - `global_summary.csv`
 - `global_summary.json`
 
+## Agentic Throughput And Efficiency Metrics
+
+Agentic AI benchmark analysis should focus on successful work, not just raw model generation. In the standard
+tables, `successful_agent_total_tokens_total` is the successful-token total, and
+`successful_agent_total_tokens_per_sec` is the successful-token throughput:
+
+```text
+successful_total_tokens / second = successful_agent_total_tokens_total / batch_wall_time_seconds
+```
+
+Power-normalized metrics should use one clearly stated watt denominator, such as average GPU power or average
+system power measured over the same batch window:
+
+```text
+successful_total_tokens / watt = successful_agent_total_tokens_total / average_power_watts
+successful_agents / watt = successful_tasks / average_power_watts
+```
+
+Use `successful_total_tokens / second` to compare end-to-end agentic throughput, `successful_total_tokens / watt`
+to compare token-level energy efficiency, and `successful_agents / watt` to compare task-success efficiency.
+For energy-normalized reporting, use the same successful numerator divided by total joules instead of average watts.
+
 ## Memory Bandwidth Metrics
 
 Each concurrency point starts AMDuProfPcm around the point execution and parses system-level memory bandwidth from the generated `report.csv`.

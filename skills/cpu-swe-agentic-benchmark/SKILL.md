@@ -35,6 +35,19 @@ The standard benchmark types are:
 
 `all` runs every registered workload in the suite. For workload details, read `references/workloads.md`.
 
+Primary agentic performance reporting should include successful-work metrics:
+
+- `successful_total_tokens / second`: successful-token throughput, computed as
+  `successful_agent_total_tokens_total / batch_wall_time_seconds`.
+- `successful_total_tokens / watt`: successful-token power efficiency, computed as
+  `successful_agent_total_tokens_total / average_power_watts` with a clearly stated power source.
+- `successful_agents / watt`: task-success power efficiency, computed as
+  `successful_tasks / average_power_watts` with the same power source used for token-per-watt reporting.
+
+Use `successful_agent_total_tokens_total` as the standard CSV field for successful total tokens.
+When reporting watt-normalized metrics, state whether the denominator is average GPU power, CPU package power,
+or average system power, and measure it over the same batch window as `batch_wall_time_seconds`.
+
 ## Standard Run Workflow
 
 1. Identify the target GPU server and server profile. Do not assume any fixed GPU model, host path, endpoint, or model name.
