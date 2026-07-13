@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cpu-swe-benchmark"
+version = "0.1.0"
+description = "CPU-centric latency and throughput benchmark for mini-swe-agent with vLLM."
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "jinja2",
+    "pytest",
+    "requests",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+test = ["httpx", "pytest"]
+
+[project.scripts]
+cpu-swe-bench = "cpu_swe_benchmark.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
