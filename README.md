@@ -8,7 +8,7 @@ The benchmark runs one workload (`algorithm_lab_sorting_bugfix`) across concurre
 
 - `algorithm_lab_sorting_bugfix`
 
-The workload copies `repo_templates/algorithm_lab` into each worker workspace. The agent must inspect the repository, fix `src/algorithm_lab/sorting.py`, run `PYTHONPATH=src python3 -m pytest tests/test_sorting.py`, avoid modifying tests, print `VALIDATION_PASSED`, and then submit. The initial bug still performs Python-level bubble-sort work in the wrong order, so pytest runs a CPU-intensive 10000-integer sort before it fails and again after the fix. The agent step limit is 20 to leave enough room for reproduce, inspect, fix, validate, and submit commands.
+The workload copies `repo_templates/algorithm_lab` into each worker workspace. The agent must inspect the repository, fix `src/algorithm_lab/sorting.py`, run `PYTHONPATH=src python3 -m pytest tests/test_sorting.py`, avoid modifying tests, print `VALIDATION_PASSED`, and then submit. The initial bug still performs Python-level bubble-sort work in the wrong order, so pytest runs CPU-intensive 10000- and 20000-integer sorts before it fails and again after the fix. The agent step limit is 20 to leave enough room for reproduce, inspect, fix, validate, and submit commands.
 
 ## Start vLLM
 

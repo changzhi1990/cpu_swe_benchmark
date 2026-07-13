@@ -12,8 +12,9 @@ Problem Description:
 You are working in a small Python package repository named algorithm_lab. The
 sorting implementation is incorrect and the sorting tests are failing. Fix the
 source code so the sorting tests pass. The initial implementation performs
-Python-level bubble-sort work but has the wrong ordering logic, so pytest runs a
-CPU-intensive 10000-integer sort before it fails and again after the fix.
+Python-level bubble-sort work but has the wrong ordering logic, so pytest runs
+CPU-intensive 10000- and 20000-integer sorts before it fails and again after the
+fix.
 
 Instructions:
 1. Inspect the repository structure.
@@ -28,7 +29,7 @@ Instructions:
    containing characters like [] because regex escaping can make the edit a
    no-op.
 8. Re-run PYTHONPATH=src python3 -m pytest tests/test_sorting.py.
-9. Confirm the tests exercise sorting 10000 integers.
+9. Confirm the tests exercise sorting arrays of sizes 10000 and 20000.
 10. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_sorting.py && echo VALIDATION_PASSED
 11. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
 
@@ -38,7 +39,7 @@ Requirements:
 - Do not mutate the input list.
 - Do not install packages.
 - Do not skip or edit tests.
-- The fixed implementation must handle the 10000-item sorting test inside pytest.
+- The fixed implementation must handle the 10000-item and 20000-item sorting tests inside pytest.
 
 Please implement a complete solution and finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
 """.strip()

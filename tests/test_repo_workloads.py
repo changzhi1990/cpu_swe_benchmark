@@ -15,6 +15,7 @@ def test_algorithm_lab_sorting_bugfix_workload_points_to_repo_template():
     assert "Do not modify tests" in prompt
     assert "VALIDATION_PASSED" in prompt
     assert "10000" in prompt
+    assert "20000" in prompt
     assert "CPU-intensive" in prompt
     assert "Python script" in prompt
     assert "sed regex" in prompt
@@ -38,10 +39,11 @@ def test_algorithm_lab_template_contains_python_package_and_failing_sorting_sour
     assert ".sort(" not in sorting_source
 
 
-def test_algorithm_lab_template_requires_cpu_intensive_10000_item_sort():
+def test_algorithm_lab_template_requires_cpu_intensive_reference_sort_sizes():
     test_source = (repo_template_path("algorithm_lab") / "tests" / "test_sorting.py").read_text(encoding="utf-8")
 
-    assert "range(10_000)" in test_source
+    assert "10_000" in test_source
+    assert "20_000" in test_source
     assert "random.Random" in test_source
     assert "sorted(values)" in test_source
     assert "inspect.getsource" in test_source

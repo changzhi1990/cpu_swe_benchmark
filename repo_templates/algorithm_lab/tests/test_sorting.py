@@ -28,11 +28,12 @@ def test_bubble_sort_does_not_delegate_to_builtin_sorting():
     assert ".sort(" not in source
 
 
-def test_bubble_sort_sorts_10000_deterministic_values():
-    rng = random.Random(20260713)
-    values = [rng.randint(-1_000_000, 1_000_000) for _ in range(10_000)]
+def test_bubble_sort_sorts_reference_benchmark_sizes():
+    for size in (10_000, 20_000):
+        rng = random.Random(20260713 + size)
+        values = [rng.randint(-1_000_000, 1_000_000) for _ in range(size)]
 
-    result = bubble_sort(values)
+        result = bubble_sort(values)
 
-    assert result == sorted(values)
-    assert values != result
+        assert result == sorted(values)
+        assert values != result
