@@ -23,11 +23,16 @@ def test_algorithm_lab_sorting_bugfix_workload_points_to_repo_template():
 
 def test_algorithm_lab_template_contains_python_package_and_failing_sorting_source():
     template = repo_template_path("algorithm_lab")
+    sorting_source = (template / "src" / "algorithm_lab" / "sorting.py").read_text(encoding="utf-8")
 
     assert (template / "pyproject.toml").exists()
     assert (template / "src" / "algorithm_lab" / "sorting.py").exists()
     assert (template / "tests" / "test_sorting.py").exists()
-    assert "return list(values)" in (template / "src" / "algorithm_lab" / "sorting.py").read_text()
+    assert "for i in range(n):" in sorting_source
+    assert "for j in range(0, n - i - 1):" in sorting_source
+    assert "result[j] < result[j + 1]" in sorting_source
+    assert "sorted(" not in sorting_source
+    assert ".sort(" not in sorting_source
 
 
 def test_algorithm_lab_template_requires_cpu_intensive_10000_item_sort():

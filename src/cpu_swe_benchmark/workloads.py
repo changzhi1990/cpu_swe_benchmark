@@ -11,8 +11,9 @@ CPU-intensive Algorithm Lab Sorting Bugfix
 Problem Description:
 You are working in a small Python package repository named algorithm_lab. The
 sorting implementation is incorrect and the sorting tests are failing. Fix the
-source code so the sorting tests pass, including the CPU-intensive validation
-that sorts 10000 deterministic integers after the bug is fixed.
+source code so the sorting tests pass. The initial implementation performs
+Python-level bubble-sort work but has the wrong ordering logic, so pytest runs a
+CPU-intensive 10000-integer sort before it fails and again after the fix.
 
 Instructions:
 1. Inspect the repository structure.
