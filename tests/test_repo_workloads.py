@@ -58,6 +58,7 @@ def test_memory_lab_bandwidth_bugfix_workload_points_to_repo_template():
     assert workload.repo_template == "memory_lab"
     assert "memory_lab" in prompt
     assert "PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py" in prompt
+    assert "`result += c`" in prompt
     assert "Do not modify tests" in prompt
     assert "VALIDATION_PASSED" in prompt
     assert "Do not create replacement benchmark scripts" in prompt
@@ -71,10 +72,11 @@ def test_memory_lab_template_contains_numpy_streaming_bug():
     assert (template / "pyproject.toml").exists()
     assert (template / "src" / "memory_lab" / "bandwidth.py").exists()
     assert (template / "tests" / "test_bandwidth.py").exists()
-    assert "np.multiply(b, scalar, out=out)" in source
-    assert "out += a" in source
-    assert "# BUG: missing out += c" in source
-    assert "        out += c" not in source
+    assert "result = np.empty_like(a)" in source
+    assert "np.multiply(b, scalar, out=result)" in source
+    assert "result += a" in source
+    assert "# BUG: missing result += c" in source
+    assert "        result += c" not in source
     assert "ELEMENTS = 2_000_000" in test_source
     assert "PASSES = 32" in test_source
     assert "np.allclose" in test_source

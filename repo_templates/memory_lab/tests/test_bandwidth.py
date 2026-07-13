@@ -43,7 +43,7 @@ def test_streaming_triad_uses_numpy_vectorized_streaming():
     source = inspect.getsource(streaming_triad)
 
     assert "np.multiply" in source
-    assert "out +=" in source
+    assert "result +=" in source
     assert "for i in range" not in source
     assert "while " not in source
 

@@ -64,14 +64,17 @@ Instructions:
 5. Do not modify tests.
 6. Implement the streaming triad with NumPy vectorized operations. Do not use
    Python element-wise loops over array elements.
-7. Do not use Python element-wise loops in the fixed implementation.
-8. Use a Python script with pathlib/read_text/write_text, or rewrite the file
+7. The bug is a missing input stream in src/memory_lab/bandwidth.py. Keep
+   `np.multiply(b, scalar, out=result)`, keep `result += a`, and add
+   `result += c` inside the loop.
+8. Do not use Python element-wise loops in the fixed implementation.
+9. Use a Python script with pathlib/read_text/write_text, or rewrite the file
    directly, when editing source code.
-9. Re-run PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py.
-10. Confirm the tests exercise a memory bandwidth workload with large arrays and
+10. Re-run PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py.
+11. Confirm the tests exercise a memory bandwidth workload with large arrays and
    repeated streaming passes.
-11. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py && echo VALIDATION_PASSED
-12. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+12. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py && echo VALIDATION_PASSED
+13. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
 
 Requirements:
 - Preserve the public function name streaming_triad.
