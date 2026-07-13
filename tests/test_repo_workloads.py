@@ -51,6 +51,36 @@ def test_algorithm_lab_template_requires_cpu_intensive_reference_sort_sizes():
     assert "\".sort(\" not in source" in test_source
 
 
+def test_memory_lab_bandwidth_bugfix_workload_points_to_repo_template():
+    workload = get_workload("memory_lab_bandwidth_bugfix")
+    prompt = workload.render_prompt()
+
+    assert workload.repo_template == "memory_lab"
+    assert "memory_lab" in prompt
+    assert "PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py" in prompt
+    assert "Do not modify tests" in prompt
+    assert "VALIDATION_PASSED" in prompt
+    assert "Do not create replacement benchmark scripts" in prompt
+
+
+def test_memory_lab_template_contains_numpy_streaming_bug():
+    template = repo_template_path("memory_lab")
+    source = (template / "src" / "memory_lab" / "bandwidth.py").read_text(encoding="utf-8")
+    test_source = (template / "tests" / "test_bandwidth.py").read_text(encoding="utf-8")
+
+    assert (template / "pyproject.toml").exists()
+    assert (template / "src" / "memory_lab" / "bandwidth.py").exists()
+    assert (template / "tests" / "test_bandwidth.py").exists()
+    assert "np.multiply(b, scalar, out=out)" in source
+    assert "out += a" in source
+    assert "# BUG: missing out += c" in source
+    assert "        out += c" not in source
+    assert "ELEMENTS = 2_000_000" in test_source
+    assert "PASSES = 32" in test_source
+    assert "np.allclose" in test_source
+    assert "for i in range" not in source
+
+
 def test_copy_repo_template_copies_files_without_aliasing(tmp_path: Path):
     destination = tmp_path / "workspace"
 

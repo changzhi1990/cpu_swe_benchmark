@@ -45,12 +45,55 @@ Please implement a complete solution and finish by running: echo COMPLETE_TASK_A
 """.strip()
 
 
+MEMORY_LAB_BANDWIDTH_BUGFIX_DESCRIPTION = """
+Memory-bandwidth-sensitive Memory Lab Bugfix
+
+Problem Description:
+You are working in a small Python package repository named memory_lab. The
+streaming memory bandwidth kernel is incorrect and the bandwidth tests are
+failing. Fix the source code so the tests pass. The initial implementation
+performs NumPy vectorized streaming reads and writes but omits one input stream,
+so pytest runs the memory-bandwidth-sensitive workload before it fails and again
+after the fix.
+
+Instructions:
+1. Inspect the repository structure.
+2. Read the relevant source and test files.
+3. Run PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py to reproduce the failure.
+4. Modify only files under src/.
+5. Do not modify tests.
+6. Implement the streaming triad with NumPy vectorized operations. Do not use
+   Python element-wise loops over array elements.
+7. Do not use Python element-wise loops in the fixed implementation.
+8. Use a Python script with pathlib/read_text/write_text, or rewrite the file
+   directly, when editing source code.
+9. Re-run PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py.
+10. Confirm the tests exercise a memory bandwidth workload with large arrays and
+   repeated streaming passes.
+11. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py && echo VALIDATION_PASSED
+12. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+
+Requirements:
+- Preserve the public function name streaming_triad.
+- Return a new output array.
+- Do not mutate input arrays.
+- Do not install packages.
+- Do not skip or edit tests.
+- Use NumPy vectorized streaming operations such as np.multiply and in-place
+  additions on the output array.
+
+Please implement a complete solution and finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+""".strip()
+
+
 REFERENCE_TASK_DESCRIPTIONS: dict[str, str] = {
     "algorithm_lab_sorting_bugfix": ALGORITHM_LAB_SORTING_BUGFIX_DESCRIPTION,
+    "memory_lab_bandwidth_bugfix": MEMORY_LAB_BANDWIDTH_BUGFIX_DESCRIPTION,
 }
 
 REPO_TEMPLATE_BY_WORKLOAD: dict[str, str] = {
     "algorithm_lab_sorting_bugfix": "algorithm_lab",
+    "memory_lab_bandwidth_bugfix": "memory_lab",
 }
 
 

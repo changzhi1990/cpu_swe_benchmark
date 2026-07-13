@@ -52,3 +52,11 @@ def test_benchmark_latency_rejects_removed_synthetic_workloads():
         return
 
     raise AssertionError("removed synthetic workload was accepted")
+
+
+def test_benchmark_latency_accepts_memory_lab_bandwidth_bugfix_workload():
+    module = load_benchmark_latency()
+    parser = module.build_parser()
+    args = parser.parse_args(["--benchmark-type", "memory_lab_bandwidth_bugfix"])
+
+    assert args.benchmark_type == "memory_lab_bandwidth_bugfix"

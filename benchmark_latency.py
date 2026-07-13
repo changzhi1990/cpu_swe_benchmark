@@ -126,7 +126,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cpu-threads-per-worker", type=int, default=1)
     parser.add_argument(
         "--benchmark-type",
-        choices=["algorithm_lab_sorting_bugfix", "all"],
+        choices=["algorithm_lab_sorting_bugfix", "memory_lab_bandwidth_bugfix", "all"],
         default="algorithm_lab_sorting_bugfix",
     )
     parser.add_argument("--workloads", default="", help="Optional comma-separated workload list; overrides type")
