@@ -87,6 +87,14 @@ def test_aggregate_runs_reports_model_serving_p90_from_completed_calls():
         base_url="http://localhost:8000/v1",
         vllm_topology="tp8",
         batch_wall_time_seconds=50.0,
+        system_metrics={
+            "memory_bandwidth_total_p90_gbps": 12.5,
+            "memory_bandwidth_total_max_gbps": 15.0,
+            "memory_bandwidth_read_p90_gbps": 8.5,
+            "memory_bandwidth_read_max_gbps": 10.0,
+            "memory_bandwidth_write_p90_gbps": 4.0,
+            "memory_bandwidth_write_max_gbps": 5.0,
+        },
     )
 
     assert summary.model_serving_seconds["ttft_p90"] == 0.4
@@ -113,6 +121,14 @@ def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
         base_url="http://localhost:8000/v1",
         vllm_topology="tp8",
         batch_wall_time_seconds=50.0,
+        system_metrics={
+            "memory_bandwidth_total_p90_gbps": 12.5,
+            "memory_bandwidth_total_max_gbps": 15.0,
+            "memory_bandwidth_read_p90_gbps": 8.5,
+            "memory_bandwidth_read_max_gbps": 10.0,
+            "memory_bandwidth_write_p90_gbps": 4.0,
+            "memory_bandwidth_write_max_gbps": 5.0,
+        },
     )
 
     csv_path = write_global_csv([summary], tmp_path)
@@ -123,3 +139,9 @@ def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
     assert values["E2E_p90_seconds"] == "20.000000"
     assert values["TTFT_p90"] == "0.400000"
     assert values["TPOT_p90"] == "0.040000"
+    assert values["memory_bandwidth_total_p90_gbps"] == "12.500000"
+    assert values["memory_bandwidth_total_max_gbps"] == "15.000000"
+    assert values["memory_bandwidth_read_p90_gbps"] == "8.500000"
+    assert values["memory_bandwidth_read_max_gbps"] == "10.000000"
+    assert values["memory_bandwidth_write_p90_gbps"] == "4.000000"
+    assert values["memory_bandwidth_write_max_gbps"] == "5.000000"

@@ -5,6 +5,7 @@ import json
 import time
 from pathlib import Path
 
+from cpu_swe_benchmark.amd_pcm import AMDuProfPcmMemorySampler
 from cpu_swe_benchmark.aggregate import aggregate_runs
 from cpu_swe_benchmark.schemas import ConcurrencySummary, RunResult, to_jsonable
 from cpu_swe_benchmark.system_sampler import SystemSampler
@@ -63,7 +64,9 @@ def run_concurrency_point(
     futures: list[concurrent.futures.Future[RunResult]] = []
     results: list[RunResult] = []
     sampler = SystemSampler(interval_seconds=1.0)
+    pcm_sampler = AMDuProfPcmMemorySampler(point_dir / "amd_pcm")
     sampler.start()
+    pcm_sampler.start()
 
     try:
         with concurrent.futures.ProcessPoolExecutor(max_workers=concurrency) as pool:
@@ -89,7 +92,9 @@ def run_concurrency_point(
             for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
     finally:
+        pcm_metrics = pcm_sampler.stop()
         system_metrics = sampler.stop()
+        system_metrics.update(pcm_metrics)
 
     batch_wall = time.time() - batch_start
     results.sort(key=lambda run: run.run_id)
@@ -139,6 +144,12 @@ def write_global_csv(summaries: list[ConcurrencySummary], output_dir: Path) -> P
         "cpu_util_max_percent",
         "memory_used_avg_percent",
         "memory_used_max_percent",
+        "memory_bandwidth_total_p90_gbps",
+        "memory_bandwidth_total_max_gbps",
+        "memory_bandwidth_read_p90_gbps",
+        "memory_bandwidth_read_max_gbps",
+        "memory_bandwidth_write_p90_gbps",
+        "memory_bandwidth_write_max_gbps",
         "gpu_util_avg_percent",
         "gpu_util_p50_percent",
         "gpu_util_p90_percent",
@@ -186,6 +197,12 @@ def write_global_csv(summaries: list[ConcurrencySummary], output_dir: Path) -> P
             f"{summary.system_metrics.get('cpu_util_max_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('memory_used_avg_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('memory_used_max_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('memory_bandwidth_total_p90_gbps', 0.0):.6f}",
+            f"{summary.system_metrics.get('memory_bandwidth_total_max_gbps', 0.0):.6f}",
+            f"{summary.system_metrics.get('memory_bandwidth_read_p90_gbps', 0.0):.6f}",
+            f"{summary.system_metrics.get('memory_bandwidth_read_max_gbps', 0.0):.6f}",
+            f"{summary.system_metrics.get('memory_bandwidth_write_p90_gbps', 0.0):.6f}",
+            f"{summary.system_metrics.get('memory_bandwidth_write_max_gbps', 0.0):.6f}",
             f"{summary.system_metrics.get('gpu_util_avg_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('gpu_util_p50_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('gpu_util_p90_percent', 0.0):.6f}",

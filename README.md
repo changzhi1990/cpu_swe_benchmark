@@ -50,7 +50,7 @@ python3 benchmark_latency.py \
 
 Each `(workload, concurrency)` point writes:
 
-- `summary.json`: success rate, completion rate, throughput, latency percentiles, LLM/bash timing breakdown, and TTFT/TPOT metrics.
+- `summary.json`: success rate, completion rate, throughput, latency percentiles, LLM/bash timing breakdown, TTFT/TPOT metrics, and AMDuProfPcm memory bandwidth metrics when available.
 - `runs.jsonl`: one JSON object per agent run.
 - `runs/<run_id>/trajectory.json`: mini-swe-agent trajectory when available.
 - `runs/<run_id>/run_result.json`: full per-run benchmark record.
@@ -60,6 +60,32 @@ The root output directory also gets:
 
 - `global_summary.csv`
 - `global_summary.json`
+
+## Memory Bandwidth Metrics
+
+Each concurrency point starts AMDuProfPcm around the point execution and parses system-level memory bandwidth from the generated `report.csv`.
+
+Default AMDuProfPcm command:
+
+```bash
+/home/user/zhi/AMDuProf_Nda_Linux_x64_5.0.1479/bin/AMDuProfPcm \
+  --msr -r -m memory -a -I 1000 -A system -O <point>/amd_pcm
+```
+
+`--msr` requires sudo. For unattended benchmark runs, provide the sudo password through:
+
+```bash
+export AMDUPROFPCM_SUDO_PASSWORD=...
+```
+
+The global CSV includes:
+
+- `memory_bandwidth_total_p90_gbps`
+- `memory_bandwidth_total_max_gbps`
+- `memory_bandwidth_read_p90_gbps`
+- `memory_bandwidth_read_max_gbps`
+- `memory_bandwidth_write_p90_gbps`
+- `memory_bandwidth_write_max_gbps`
 
 ## Success Criteria
 
