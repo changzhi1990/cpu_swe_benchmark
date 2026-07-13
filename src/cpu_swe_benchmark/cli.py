@@ -45,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--task-timeout", type=int, default=600, help="Per-agent wall-clock timeout in seconds")
     parser.add_argument("--command-timeout", type=int, default=120, help="Per-command timeout in seconds")
     parser.add_argument("--cpu-threads-per-worker", type=int, default=1, help="OMP/MKL/OpenBLAS threads per worker")
-    parser.add_argument("--model-max-tokens", type=int, default=2048, help="Max completion tokens per model call")
+    parser.add_argument("--model-max-tokens", type=int, default=512, help="Max completion tokens per model call")
     parser.add_argument("--temperature", type=float, default=0.0, help="Model temperature")
     return parser
 

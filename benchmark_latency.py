@@ -67,7 +67,7 @@ class LatencyBenchmarker:
         endpoints = parse_endpoints(self.model_config.get("base_url", "http://localhost:8000/v1"))
         model = self.model_config.get("model_name", "qwen2.5-coder-32b")
         api_key = self.model_config.get("api_key", "token-abc123")
-        max_tokens = int(self.model_config.get("max_tokens", 2048))
+        max_tokens = int(self.model_config.get("max_tokens", 512))
         temperature = float(self.model_config.get("temperature", 0.0))
         summaries: list[ConcurrencySummary] = []
 
@@ -116,7 +116,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model-path", default="qwen2.5-coder-32b", help="Served vLLM model name")
     parser.add_argument("--base-url", default="http://localhost:8000/v1", help="Comma-separated vLLM endpoints")
     parser.add_argument("--api-key", default="token-abc123", help="Local vLLM API key")
-    parser.add_argument("--max-tokens", type=int, default=2048, help="Max completion tokens per model call")
+    parser.add_argument("--max-tokens", type=int, default=512, help="Max completion tokens per model call")
     parser.add_argument("--temperature", type=float, default=0.0, help="Model temperature")
     parser.add_argument("--output-dir", default="benchmark_results", help="Output directory")
     parser.add_argument("--mini-swe-agent-src", default="/home/user/zhi/mini-swe-agent-latest/src")

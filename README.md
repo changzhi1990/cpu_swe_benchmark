@@ -18,6 +18,7 @@ bash scripts/start_vllm_tp8_qwen32b.sh
 ```
 
 The default endpoint is `http://localhost:8000/v1`, served model name is `qwen2.5-coder-32b`, and API key is `token-abc123`.
+Each LLM call defaults to `max_tokens=512` so long agent histories remain under the local vLLM context limit.
 
 ## Run Quick Benchmark
 

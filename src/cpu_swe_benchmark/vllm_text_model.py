@@ -18,7 +18,7 @@ class VLLMTextModelConfig:
     base_url: str
     model_name: str
     api_key: str = "token-abc123"
-    max_tokens: int = 2048
+    max_tokens: int = 512
     temperature: float = 0.0
     repetition_penalty: float | None = 1.05
     timeout_seconds: int = 180

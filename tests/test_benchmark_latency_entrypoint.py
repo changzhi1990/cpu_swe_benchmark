@@ -39,6 +39,7 @@ def test_benchmark_latency_parser_defaults_to_algorithm_lab_sorting_bugfix_sweep
     assert args.concurrency_levels == "1,2,4,8,16,32,64,128"
     assert args.model_path == "qwen2.5-coder-32b"
     assert args.base_url == "http://localhost:8000/v1"
+    assert args.max_tokens == 512
 
 
 def test_benchmark_latency_rejects_removed_synthetic_workloads():
