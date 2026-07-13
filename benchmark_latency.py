@@ -57,9 +57,11 @@ class LatencyBenchmarker:
         self.command_timeout_seconds = command_timeout_seconds
         self.cpu_threads_per_worker = cpu_threads_per_worker
 
-    def run_sorting_benchmark(self, concurrency_levels: list[int]) -> list[ConcurrencySummary]:
-        """Run the reference sorting benchmark across concurrency points."""
-        return self.run_workloads(["sorting"], concurrency_levels)
+    def run_algorithm_lab_sorting_bugfix_benchmark(
+        self, concurrency_levels: list[int]
+    ) -> list[ConcurrencySummary]:
+        """Run the CPU-intensive repo-based sorting bugfix benchmark."""
+        return self.run_workloads(["algorithm_lab_sorting_bugfix"], concurrency_levels)
 
     def run_workloads(self, workload_names: list[str], concurrency_levels: list[int]) -> list[ConcurrencySummary]:
         endpoints = parse_endpoints(self.model_config.get("base_url", "http://localhost:8000/v1"))
@@ -124,20 +126,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--cpu-threads-per-worker", type=int, default=1)
     parser.add_argument(
         "--benchmark-type",
-        choices=[
-            "sorting",
-            "fibonacci",
-            "prime_numbers",
-            "numerical_integration",
-            "matmul",
-            "lu_decomposition",
-            "knn",
-            "fft_convolution",
-            "memory_bandwidth_utilization",
-            "algorithm_lab_sorting_bugfix",
-            "all",
-        ],
-        default="sorting",
+        choices=["algorithm_lab_sorting_bugfix", "all"],
+        default="algorithm_lab_sorting_bugfix",
     )
     parser.add_argument("--workloads", default="", help="Optional comma-separated workload list; overrides type")
     parser.add_argument("--concurrency-levels", default="1,2,4,8,16,32,64,128")

@@ -9,10 +9,10 @@ python3 "${ROOT_DIR}/benchmark_latency.py" \
   --api-key "${API_KEY:-token-abc123}" \
   --model-path "${MODEL_NAME:-qwen2.5-coder-32b}" \
   --vllm-topology tp8 \
-  --benchmark-type sorting \
+  --benchmark-type algorithm_lab_sorting_bugfix \
   --concurrency-levels "${CONCURRENCY_LEVELS:-1,2,4,8,16,32,64,128}" \
   --task-timeout "${TASK_TIMEOUT:-600}" \
   --command-timeout "${COMMAND_TIMEOUT:-120}" \
   --cpu-threads-per-worker "${CPU_THREADS_PER_WORKER:-1}" \
   --mini-swe-agent-src "${MINI_SWE_AGENT_SRC:-/home/user/zhi/mini-swe-agent-latest/src}" \
-  --output-dir "${OUTPUT_DIR:-${ROOT_DIR}/results/qwen32b_tp8_sorting_quick}"
+  --output-dir "${OUTPUT_DIR:-${ROOT_DIR}/results/qwen32b_tp8_algorithm_lab_sorting_bugfix_quick}"

@@ -2,27 +2,13 @@
 
 CPU-centric latency and throughput benchmark for latest `mini-swe-agent` with a local vLLM TP8 Qwen2.5-Coder-32B-Instruct service.
 
-The quick path benchmarks one workload (`sorting`) across concurrency points `1,2,4,8,16,32,64,128`. Each concurrency point starts that many local mini-swe-agent workers once (`waves=1`) and reports task completion latency, success rate, successful-task throughput, system utilization, and workload execution phase utilization.
+The benchmark runs one workload (`algorithm_lab_sorting_bugfix`) across concurrency points `1,2,4,8,16,32,64,128`. Each concurrency point starts that many local mini-swe-agent workers once (`waves=1`) and reports task completion latency, success rate, successful-task throughput, system utilization, workload execution phase utilization, and LLM serving TTFT/TPOT metrics.
 
 ## Workloads
 
-Synthetic CPU-centric workloads:
-
-- `sorting`
-- `fibonacci`
-- `prime_numbers`
-- `numerical_integration`
-- `matmul`
-- `lu_decomposition`
-- `knn`
-- `fft_convolution`
-- `memory_bandwidth_utilization`
-
-Repo-based coding workload:
-
 - `algorithm_lab_sorting_bugfix`
 
-The repo-based workload copies `repo_templates/algorithm_lab` into each worker workspace. The agent must inspect the repository, fix `src/algorithm_lab/sorting.py`, run `PYTHONPATH=src python3 -m pytest tests/test_sorting.py`, avoid modifying tests, print `VALIDATION_PASSED`, and then submit.
+The workload copies `repo_templates/algorithm_lab` into each worker workspace. The agent must inspect the repository, fix `src/algorithm_lab/sorting.py`, run `PYTHONPATH=src python3 -m pytest tests/test_sorting.py`, avoid modifying tests, print `VALIDATION_PASSED`, and then submit. The pytest suite includes a CPU-intensive validation that sorts 10000 deterministic integers after the bug is fixed.
 
 ## Start vLLM
 
@@ -46,20 +32,7 @@ For a faster smoke test:
 CONCURRENCY_LEVELS=1,2,4 bash scripts/run_sorting_quick.sh
 ```
 
-## Run Other Workloads
-
-```bash
-python3 benchmark_latency.py \
-  --base-url http://localhost:8000/v1 \
-  --api-key token-abc123 \
-  --model-path qwen2.5-coder-32b \
-  --workloads sorting,fibonacci,prime_numbers,numerical_integration,matmul,lu_decomposition,knn,fft_convolution,memory_bandwidth_utilization \
-  --concurrency-levels 1,2,4,8,16,32,64,128 \
-  --mini-swe-agent-src /home/user/zhi/mini-swe-agent-latest/src \
-  --output-dir results/qwen32b_tp8_all
-```
-
-Run the repo-based coding workload:
+## Run Benchmark
 
 ```bash
 python3 benchmark_latency.py \
@@ -67,7 +40,7 @@ python3 benchmark_latency.py \
   --api-key token-abc123 \
   --model-path qwen2.5-coder-32b \
   --benchmark-type algorithm_lab_sorting_bugfix \
-  --concurrency-levels 1,2,4,8,16,32 \
+  --concurrency-levels 1,2,4,8,16,32,64,128 \
   --mini-swe-agent-src /home/user/zhi/mini-swe-agent-latest/src \
   --output-dir results/qwen32b_tp8_algorithm_lab_sorting_bugfix
 ```
@@ -76,7 +49,7 @@ python3 benchmark_latency.py \
 
 Each `(workload, concurrency)` point writes:
 
-- `summary.json`: success rate, completion rate, throughput, latency percentiles, LLM/bash timing breakdown.
+- `summary.json`: success rate, completion rate, throughput, latency percentiles, LLM/bash timing breakdown, and TTFT/TPOT metrics.
 - `runs.jsonl`: one JSON object per agent run.
 - `runs/<run_id>/trajectory.json`: mini-swe-agent trajectory when available.
 - `runs/<run_id>/run_result.json`: full per-run benchmark record.

@@ -1,3 +1,6 @@
+import inspect
+import random
+
 from algorithm_lab.sorting import bubble_sort
 
 
@@ -16,3 +19,20 @@ def test_bubble_sort_does_not_mutate_input():
 
     assert result == [1, 2, 4]
     assert values == [4, 2, 1]
+
+
+def test_bubble_sort_does_not_delegate_to_builtin_sorting():
+    source = inspect.getsource(bubble_sort)
+
+    assert "sorted(" not in source
+    assert ".sort(" not in source
+
+
+def test_bubble_sort_sorts_10000_deterministic_values():
+    rng = random.Random(20260713)
+    values = [rng.randint(-1_000_000, 1_000_000) for _ in range(10_000)]
+
+    result = bubble_sort(values)
+
+    assert result == sorted(values)
+    assert values != result

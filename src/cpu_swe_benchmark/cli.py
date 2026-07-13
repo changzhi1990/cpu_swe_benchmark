@@ -22,13 +22,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--api-key", default="token-abc123", help="vLLM API key")
     parser.add_argument("--model", default="qwen2.5-coder-32b", help="Served model name")
     parser.add_argument("--vllm-topology", default="tp8", help="Topology label written to results")
-    parser.add_argument("--workloads", default="sorting", help="Comma-separated workload names, or 'all'")
+    parser.add_argument(
+        "--workloads",
+        default="algorithm_lab_sorting_bugfix",
+        help="Comma-separated workload names, or 'all'",
+    )
     parser.add_argument(
         "--concurrency-levels",
         default="1,2,4,8,16,32,64,128",
         help="Comma-separated agent concurrency points",
     )
-    parser.add_argument("--output-dir", default="results/qwen32b_tp8_sorting_quick", help="Result directory")
+    parser.add_argument(
+        "--output-dir",
+        default="results/qwen32b_tp8_algorithm_lab_sorting_bugfix_quick",
+        help="Result directory",
+    )
     parser.add_argument(
         "--mini-swe-agent-src",
         default="/home/user/zhi/mini-swe-agent-latest/src",

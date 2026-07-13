@@ -14,3 +14,11 @@ def test_vllm_start_script_uses_docker_image_and_local_model_mount():
     assert "-v \"${HOST_MODEL_PATH}:${CONTAINER_MODEL_PATH}:ro\"" in script
     assert "--tensor-parallel-size 8" in script
     assert "--model \"${CONTAINER_MODEL_PATH}\"" in script
+
+
+def test_quick_script_runs_algorithm_lab_sorting_bugfix_workload():
+    script = (ROOT / "scripts" / "run_sorting_quick.sh").read_text(encoding="utf-8")
+
+    assert "--benchmark-type algorithm_lab_sorting_bugfix" in script
+    assert "qwen32b_tp8_algorithm_lab_sorting_bugfix_quick" in script
+    assert "--benchmark-type sorting" not in script

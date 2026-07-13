@@ -27,23 +27,27 @@ def test_benchmark_latency_exposes_reference_style_benchmarker():
     )
     assert benchmarker.model_config["model_name"] == "qwen2.5-coder-32b"
     assert benchmarker.output_dir == Path("results/test")
-    assert hasattr(benchmarker, "run_sorting_benchmark")
+    assert hasattr(benchmarker, "run_algorithm_lab_sorting_bugfix_benchmark")
 
 
-def test_benchmark_latency_parser_defaults_to_sorting_quick_sweep():
+def test_benchmark_latency_parser_defaults_to_algorithm_lab_sorting_bugfix_sweep():
     module = load_benchmark_latency()
     parser = module.build_parser()
     args = parser.parse_args([])
 
-    assert args.benchmark_type == "sorting"
+    assert args.benchmark_type == "algorithm_lab_sorting_bugfix"
     assert args.concurrency_levels == "1,2,4,8,16,32,64,128"
     assert args.model_path == "qwen2.5-coder-32b"
     assert args.base_url == "http://localhost:8000/v1"
 
 
-def test_benchmark_latency_accepts_memory_bandwidth_utilization_workload():
+def test_benchmark_latency_rejects_removed_synthetic_workloads():
     module = load_benchmark_latency()
     parser = module.build_parser()
-    args = parser.parse_args(["--benchmark-type", "memory_bandwidth_utilization"])
 
-    assert args.benchmark_type == "memory_bandwidth_utilization"
+    try:
+        parser.parse_args(["--benchmark-type", "memory_bandwidth_utilization"])
+    except SystemExit:
+        return
+
+    raise AssertionError("removed synthetic workload was accepted")
