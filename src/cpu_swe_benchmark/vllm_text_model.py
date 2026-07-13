@@ -60,10 +60,60 @@ class VLLMTextModel:
             "messages": [{k: v for k, v in msg.items() if k != "extra"} for msg in messages],
             "max_tokens": self.config.max_tokens,
             "temperature": self.config.temperature,
+            "stream": True,
+            "stream_options": {"include_usage": True},
         }
         if self.config.repetition_penalty is not None:
             payload["repetition_penalty"] = self.config.repetition_penalty
         return payload
+
+    def _stream_completion(self, payload: dict[str, Any], headers: dict[str, str]) -> tuple[str, dict[str, Any]]:
+        request_payload = {key: value for key, value in payload.items() if not key.startswith("_")}
+        response = requests.post(
+            self._endpoint(),
+            headers=headers,
+            json=request_payload,
+            timeout=self.config.timeout_seconds,
+            stream=True,
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f"vLLM returned HTTP {response.status_code}: {response.text[:500]}")
+
+        content_parts: list[str] = []
+        usage: dict[str, Any] = {}
+        first_token_timestamp = None
+        start = payload["_timestamp_start"]
+        for line in response.iter_lines(decode_unicode=True):
+            if not line:
+                continue
+            if not line.startswith("data: "):
+                continue
+            data_text = line[len("data: ") :].strip()
+            if data_text == "[DONE]":
+                break
+            chunk = json.loads(data_text)
+            if chunk.get("usage"):
+                usage = chunk["usage"]
+            for choice in chunk.get("choices", []):
+                fragment = choice.get("delta", {}).get("content")
+                if not fragment:
+                    continue
+                if first_token_timestamp is None:
+                    first_token_timestamp = time.time()
+                content_parts.append(fragment)
+        end = time.time()
+        content = "".join(content_parts)
+        completion_tokens = int(usage.get("completion_tokens") or 0)
+        ttft_seconds = first_token_timestamp - start if first_token_timestamp is not None else None
+        tpot_seconds = None
+        if first_token_timestamp is not None:
+            tpot_seconds = (end - first_token_timestamp) / (completion_tokens - 1) if completion_tokens > 1 else 0.0
+        return content, {
+            "usage": usage,
+            "timestamp_end": end,
+            "ttft_seconds": ttft_seconds,
+            "tpot_seconds": tpot_seconds,
+        }
 
     def query(self, messages: list[dict[str, Any]], **kwargs) -> dict[str, Any]:
         payload = self._payload(messages)
@@ -74,28 +124,22 @@ class VLLMTextModel:
             "Authorization": f"Bearer {self.config.api_key}",
         }
         start = time.time()
+        payload["_timestamp_start"] = start
         last_error = ""
         for attempt in range(1, self.config.max_retries + 1):
             try:
-                response = requests.post(
-                    self._endpoint(),
-                    headers=headers,
-                    json=payload,
-                    timeout=self.config.timeout_seconds,
-                )
-                if response.status_code != 200:
-                    raise RuntimeError(f"vLLM returned HTTP {response.status_code}: {response.text[:500]}")
-                data = response.json()
-                content = data["choices"][0]["message"].get("content") or ""
+                content, data = self._stream_completion(payload, headers)
                 actions = self._parse_actions(content)
-                end = time.time()
                 usage = data.get("usage", {})
+                end = float(data["timestamp_end"])
                 self.n_calls += 1
                 record = {
                     "call_number": self.n_calls,
                     "timestamp_start": start,
                     "timestamp_end": end,
                     "duration_seconds": end - start,
+                    "ttft_seconds": data.get("ttft_seconds"),
+                    "tpot_seconds": data.get("tpot_seconds"),
                     "attempt_number": attempt,
                     "prompt_tokens": int(usage.get("prompt_tokens") or 0),
                     "completion_tokens": int(usage.get("completion_tokens") or 0),
@@ -108,7 +152,7 @@ class VLLMTextModel:
                     "content": content,
                     "extra": {
                         "actions": actions,
-                        "response": data,
+                        "response": {"usage": usage},
                         "cost": 0.0,
                         "timestamp": end,
                     },

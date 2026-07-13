@@ -11,6 +11,8 @@ class ModelCall:
     timestamp_start: float
     timestamp_end: float
     duration_seconds: float
+    ttft_seconds: float | None = None
+    tpot_seconds: float | None = None
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
@@ -82,6 +84,7 @@ class ConcurrencySummary:
     avg_llm_time_seconds_per_task: float
     avg_bash_time_seconds_per_task: float
     avg_framework_overhead_seconds_per_task: float
+    model_serving_seconds: dict[str, float] = field(default_factory=dict)
     system_metrics: dict[str, float] = field(default_factory=dict)
     runs: list[dict[str, Any]] = field(default_factory=list)
 

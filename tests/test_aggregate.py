@@ -1,8 +1,9 @@
 from cpu_swe_benchmark.aggregate import aggregate_runs, percentile
+from cpu_swe_benchmark.runner import write_global_csv
 from cpu_swe_benchmark.schemas import RunResult
 
 
-def make_run(run_id, *, status="success", wall=10.0, llm=6.0, bash=3.0):
+def make_run(run_id, *, status="success", wall=10.0, llm=6.0, bash=3.0, model_call_log=None):
     return RunResult(
         run_id=run_id,
         workload="sorting",
@@ -18,6 +19,7 @@ def make_run(run_id, *, status="success", wall=10.0, llm=6.0, bash=3.0):
         endpoint="http://localhost:8000/v1",
         trajectory_path=None,
         error=None,
+        model_call_log=model_call_log or [],
     )
 
 
@@ -57,3 +59,67 @@ def test_aggregate_runs_reports_success_rate_and_successful_throughput():
     assert summary.avg_llm_time_seconds_per_task == 13.75
     assert summary.avg_bash_time_seconds_per_task == 7.25
     assert summary.system_metrics["cpu_util_avg_percent"] == 42.0
+
+
+def test_aggregate_runs_reports_model_serving_p90_from_completed_calls():
+    runs = [
+        make_run(
+            "r1",
+            model_call_log=[
+                {"status": "completed", "ttft_seconds": 0.1, "tpot_seconds": 0.01},
+                {"status": "completed", "ttft_seconds": 0.2, "tpot_seconds": 0.02},
+            ],
+        ),
+        make_run(
+            "r2",
+            model_call_log=[
+                {"status": "completed", "ttft_seconds": 0.4, "tpot_seconds": 0.04},
+                {"status": "error", "ttft_seconds": 9.9, "tpot_seconds": 9.9},
+            ],
+        ),
+    ]
+
+    summary = aggregate_runs(
+        runs,
+        workload="sorting",
+        concurrency=2,
+        model="qwen2.5-coder-32b",
+        base_url="http://localhost:8000/v1",
+        vllm_topology="tp8",
+        batch_wall_time_seconds=50.0,
+    )
+
+    assert summary.model_serving_seconds["ttft_p90"] == 0.4
+    assert summary.model_serving_seconds["tpot_p90"] == 0.04
+
+
+def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
+    summary = aggregate_runs(
+        [
+            make_run(
+                "r1",
+                wall=10.0,
+                model_call_log=[{"status": "completed", "ttft_seconds": 0.1, "tpot_seconds": 0.01}],
+            ),
+            make_run(
+                "r2",
+                wall=20.0,
+                model_call_log=[{"status": "completed", "ttft_seconds": 0.4, "tpot_seconds": 0.04}],
+            ),
+        ],
+        workload="sorting",
+        concurrency=2,
+        model="qwen2.5-coder-32b",
+        base_url="http://localhost:8000/v1",
+        vllm_topology="tp8",
+        batch_wall_time_seconds=50.0,
+    )
+
+    csv_path = write_global_csv([summary], tmp_path)
+    header, row = csv_path.read_text(encoding="utf-8").splitlines()
+    columns = header.split(",")
+    values = dict(zip(columns, row.split(",")))
+
+    assert values["E2E_p90_seconds"] == "20.000000"
+    assert values["TTFT_p90"] == "0.400000"
+    assert values["TPOT_p90"] == "0.040000"

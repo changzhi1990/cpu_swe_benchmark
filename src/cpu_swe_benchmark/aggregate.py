@@ -20,6 +20,18 @@ def mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
+def model_call_values(runs: list[RunResult], key: str) -> list[float]:
+    values: list[float] = []
+    for run in runs:
+        for call in run.model_call_log:
+            if call.get("status") != "completed":
+                continue
+            value = call.get(key)
+            if isinstance(value, (int, float)):
+                values.append(float(value))
+    return values
+
+
 def aggregate_runs(
     runs: list[RunResult],
     *,
@@ -40,6 +52,8 @@ def aggregate_runs(
     latencies = [run.total_wall_time_seconds for run in runs]
     llm_times = [run.llm_time_total_seconds for run in runs]
     bash_times = [run.bash_time_total_seconds for run in runs]
+    ttft_values = model_call_values(runs, "ttft_seconds")
+    tpot_values = model_call_values(runs, "tpot_seconds")
     framework_times = [
         max(0.0, run.total_wall_time_seconds - run.llm_time_total_seconds - run.bash_time_total_seconds)
         for run in runs
@@ -88,6 +102,12 @@ def aggregate_runs(
         avg_llm_time_seconds_per_task=mean(llm_times),
         avg_bash_time_seconds_per_task=mean(bash_times),
         avg_framework_overhead_seconds_per_task=mean(framework_times),
+        model_serving_seconds={
+            "ttft_p50": percentile(ttft_values, 50),
+            "ttft_p90": percentile(ttft_values, 90),
+            "tpot_p50": percentile(tpot_values, 50),
+            "tpot_p90": percentile(tpot_values, 90),
+        },
         system_metrics=merged_system_metrics,
         runs=[to_jsonable(run) for run in runs],
     )
