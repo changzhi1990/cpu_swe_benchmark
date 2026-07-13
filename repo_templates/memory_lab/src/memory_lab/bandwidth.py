@@ -16,5 +16,5 @@ def streaming_triad(
     for _ in range(passes):
         np.multiply(b, scalar, out=result)
         result += a
-        # BUG: missing result += c
+        # result += c  # BUG: missing input stream
     return result

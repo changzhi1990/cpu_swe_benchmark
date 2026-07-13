@@ -65,8 +65,8 @@ Instructions:
 6. Implement the streaming triad with NumPy vectorized operations. Do not use
    Python element-wise loops over array elements.
 7. The bug is a missing input stream in src/memory_lab/bandwidth.py. Keep
-   `np.multiply(b, scalar, out=result)`, keep `result += a`, and add
-   `result += c` inside the loop.
+   `np.multiply(b, scalar, out=result)`, keep `result += a`, and uncomment the
+   existing `# result += c` line inside the loop so it becomes `result += c`.
 8. Do not use Python element-wise loops in the fixed implementation.
 9. Use a Python script with pathlib/read_text/write_text, or rewrite the file
    directly, when editing source code.
