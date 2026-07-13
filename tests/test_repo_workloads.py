@@ -32,7 +32,8 @@ def test_algorithm_lab_template_contains_python_package_and_failing_sorting_sour
     assert (template / "tests" / "test_sorting.py").exists()
     assert "for i in range(n):" in sorting_source
     assert "for j in range(0, n - i - 1):" in sorting_source
-    assert "result[j] < result[j + 1]" in sorting_source
+    assert "arr = list(arr)" in sorting_source
+    assert "arr[j] < arr[j + 1]" in sorting_source
     assert "sorted(" not in sorting_source
     assert ".sort(" not in sorting_source
 
