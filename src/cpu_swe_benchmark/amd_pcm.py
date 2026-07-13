@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import os
+import re
 import signal
 import subprocess
 import time
@@ -18,6 +19,7 @@ SUDO_PASSWORD_ENV = "AMDUPROFPCM_SUDO_PASSWORD"
 def build_amd_pcm_command(pcm_path: Path, output_dir: Path) -> list[str]:
     return [
         str(pcm_path),
+        "top",
         "--msr",
         "-r",
         "-m",
@@ -25,10 +27,6 @@ def build_amd_pcm_command(pcm_path: Path, output_dir: Path) -> list[str]:
         "-a",
         "-I",
         "1000",
-        "-A",
-        "system",
-        "-O",
-        str(output_dir),
     ]
 
 
@@ -77,6 +75,43 @@ def parse_amd_pcm_memory_report(text: str) -> dict[str, float]:
     }
 
 
+def _first_system_value(line: str) -> float | None:
+    parts = [part.strip() for part in line.split("|")]
+    if len(parts) < 2:
+        return None
+    match = re.search(r"-?\d+(?:\.\d+)?", parts[1])
+    return float(match.group(0)) if match else None
+
+
+def parse_amd_pcm_top_output(text: str) -> dict[str, float]:
+    total_values: list[float] = []
+    read_values: list[float] = []
+    write_values: list[float] = []
+    for line in text.splitlines():
+        if "Total Mem Bw (GB/s)" in line:
+            value = _first_system_value(line)
+            if value is not None:
+                total_values.append(value)
+        elif "Total Mem RdBw (GB/s)" in line:
+            value = _first_system_value(line)
+            if value is not None:
+                read_values.append(value)
+        elif "Total Mem WrBw (GB/s)" in line:
+            value = _first_system_value(line)
+            if value is not None:
+                write_values.append(value)
+    if not total_values:
+        return _empty_memory_bandwidth_metrics()
+    return {
+        "memory_bandwidth_total_p90_gbps": percentile(total_values, 90),
+        "memory_bandwidth_total_max_gbps": max(total_values),
+        "memory_bandwidth_read_p90_gbps": percentile(read_values, 90),
+        "memory_bandwidth_read_max_gbps": max(read_values),
+        "memory_bandwidth_write_p90_gbps": percentile(write_values, 90),
+        "memory_bandwidth_write_max_gbps": max(write_values),
+    }
+
+
 def _find_report_csv(output_dir: Path) -> Path | None:
     reports = sorted(output_dir.glob("AMDuProfPcm-*/report.csv"))
     return reports[-1] if reports else None
@@ -97,6 +132,8 @@ class AMDuProfPcmMemorySampler:
         self.error: str | None = None
         self.stdout_path = self.output_dir / "amd_pcm.stdout.log"
         self.stderr_path = self.output_dir / "amd_pcm.stderr.log"
+        self._stdout_handle = None
+        self._stderr_handle = None
 
     def start(self) -> None:
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -107,13 +144,13 @@ class AMDuProfPcmMemorySampler:
             else:
                 command = ["sudo", "-n", *command]
         try:
-            stdout = self.stdout_path.open("w", encoding="utf-8")
-            stderr = self.stderr_path.open("w", encoding="utf-8")
+            self._stdout_handle = self.stdout_path.open("w", encoding="utf-8")
+            self._stderr_handle = self.stderr_path.open("w", encoding="utf-8")
             self.process = subprocess.Popen(
                 command,
                 stdin=subprocess.PIPE if self.sudo_password and os.geteuid() != 0 else subprocess.DEVNULL,
-                stdout=stdout,
-                stderr=stderr,
+                stdout=self._stdout_handle,
+                stderr=self._stderr_handle,
                 text=True,
                 start_new_session=True,
             )
@@ -141,9 +178,18 @@ class AMDuProfPcmMemorySampler:
                     self.process.wait(timeout=5)
             except ProcessLookupError:
                 pass
+        if self._stdout_handle is not None:
+            self._stdout_handle.close()
+        if self._stderr_handle is not None:
+            self._stderr_handle.close()
         metrics: dict[str, Any] = _empty_memory_bandwidth_metrics()
         report_path = _find_report_csv(self.output_dir)
-        if report_path is not None:
+        stdout_text = self.stdout_path.read_text(encoding="utf-8", errors="ignore") if self.stdout_path.exists() else ""
+        top_metrics = parse_amd_pcm_top_output(stdout_text)
+        if top_metrics["memory_bandwidth_total_max_gbps"] > 0.0:
+            metrics.update(top_metrics)
+            metrics["amd_pcm_stdout_log"] = str(self.stdout_path)
+        elif report_path is not None and report_path.stat().st_size > 0:
             metrics.update(parse_amd_pcm_memory_report(report_path.read_text(encoding="utf-8", errors="ignore")))
             metrics["amd_pcm_report_csv"] = str(report_path)
         else:

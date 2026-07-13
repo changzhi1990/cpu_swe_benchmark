@@ -69,7 +69,7 @@ Default AMDuProfPcm command:
 
 ```bash
 /home/user/zhi/AMDuProf_Nda_Linux_x64_5.0.1479/bin/AMDuProfPcm \
-  --msr -r -m memory -a -I 1000 -A system -O <point>/amd_pcm
+  top --msr -r -m memory -a -I 1000
 ```
 
 `--msr` requires sudo. For unattended benchmark runs, provide the sudo password through:
