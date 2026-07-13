@@ -23,6 +23,7 @@ Use non-interactive commands only. Keep commands concise.
 """
 
 INSTANCE_TEMPLATE = "{{ task }}"
+DEFAULT_AGENT_STEP_LIMIT = 20
 
 
 @dataclass(frozen=True)
@@ -99,7 +100,7 @@ def run_worker(config: WorkerConfig) -> RunResult:
         agent_config = AgentConfig(
             system_template=SYSTEM_TEMPLATE,
             instance_template=INSTANCE_TEMPLATE,
-            step_limit=10,
+            step_limit=DEFAULT_AGENT_STEP_LIMIT,
             cost_limit=0.0,
             wall_time_limit_seconds=config.task_timeout_seconds,
             output_path=trajectory_path,

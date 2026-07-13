@@ -16,6 +16,8 @@ def test_algorithm_lab_sorting_bugfix_workload_points_to_repo_template():
     assert "VALIDATION_PASSED" in prompt
     assert "10000" in prompt
     assert "CPU-intensive" in prompt
+    assert "Python script" in prompt
+    assert "sed regex" in prompt
     assert "Create exactly one Python file" not in prompt
     assert "benchmark_algorithm_lab_sorting_bugfix.py" not in prompt
     assert "Do not create replacement benchmark scripts" in prompt

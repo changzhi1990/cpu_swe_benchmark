@@ -23,10 +23,14 @@ Instructions:
 5. Do not modify tests.
 6. Implement a Python-level bubble sort that sorts a copy of the input without
    delegating to built-in sorted() or list.sort().
-7. Re-run PYTHONPATH=src python3 -m pytest tests/test_sorting.py.
-8. Confirm the tests exercise sorting 10000 integers.
-9. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_sorting.py && echo VALIDATION_PASSED
-10. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+7. Use a Python script with pathlib/read_text/write_text, or rewrite the file
+   directly, when editing source code. Avoid sed regex replacements for lines
+   containing characters like [] because regex escaping can make the edit a
+   no-op.
+8. Re-run PYTHONPATH=src python3 -m pytest tests/test_sorting.py.
+9. Confirm the tests exercise sorting 10000 integers.
+10. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_sorting.py && echo VALIDATION_PASSED
+11. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
 
 Requirements:
 - Preserve the public function name bubble_sort.
