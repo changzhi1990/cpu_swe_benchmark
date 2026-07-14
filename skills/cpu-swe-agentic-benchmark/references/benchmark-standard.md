@@ -1,6 +1,6 @@
 # Benchmark Standard
 
-The CPU SWE agentic AI benchmark evaluates local coding-agent performance under controlled repo-based bugfix workloads.
+The CPU SWE agentic AI benchmark evaluates coding-agent performance under controlled repo-based bugfix workloads on GPU servers. It is not tied to one machine SKU; compare servers by recording the server profile, model endpoint, model name, concurrency levels, and benchmark commit.
 
 ## Standard Benchmark Types
 
@@ -14,13 +14,16 @@ The CPU SWE agentic AI benchmark evaluates local coding-agent performance under 
 
 Each concurrency point starts `N` mini-swe-agent workers once. Each worker gets an independent copy of the workload repo template and must fix, validate, and submit. The benchmark aggregates success, latency, model serving, throughput, and system metrics per workload/concurrency point.
 
-## Standard Services
+## Server Profile Fields
 
-- vLLM OpenAI-compatible endpoint: `http://localhost:8000/v1`
-- model: `qwen2.5-coder-32b`
-- API key: `token-abc123`
-- metrics dashboard: `http://localhost:8080`
-- AMDuProfPcm path: `/home/user/zhi/AMDuProf_Nda_Linux_x64_5.0.1479/bin/AMDuProfPcm`
+Record these for every GPU server benchmark:
+
+- hostname and GPU inventory (`nvidia-smi` when available)
+- CPU and NUMA topology (`lscpu`)
+- memory capacity (`free -h`)
+- benchmark commit and model server version if known
+- `BENCH_ROOT`, model endpoint, model name, API key source, metrics endpoint
+- AMDuProfPcm path or alternative memory bandwidth collector
 
 ## Success Criteria
 

@@ -1,23 +1,23 @@
 # Troubleshooting
 
-## vLLM Connection Refused
+## Model Endpoint Connection Refused
 
-Check whether the container is running and whether port 8000 is listening:
+Check whether the model server is running and whether the configured endpoint is reachable:
 
 ```bash
-docker ps
 ss -ltnp | grep ':8000'
+curl -sS -m 5 -H "Authorization: Bearer $API_KEY" "$VLLM_URL/models"
 ```
 
-Inspect the vLLM log before rerunning. Do not restart vLLM while a benchmark is still running.
+For non-vLLM servers, use the equivalent OpenAI-compatible models endpoint.
 
 ## HTTP 500 or EngineDeadError
 
-Inspect vLLM logs for CUDA OOM or EngineCore errors. If high concurrency causes CUDA OOM, lower `GPU_MEMORY_UTILIZATION`, reduce the concurrency point, or restart vLLM after collecting evidence.
+Inspect model server logs for CUDA OOM or engine errors. If high concurrency causes CUDA OOM, lower GPU memory utilization, reduce the concurrency point, or restart the model server after collecting evidence. Do not blindly rerun.
 
 ## AMDuProfPcm Has Zero Bandwidth
 
-Check `AMDUPROFPCM_SUDO_PASSWORD`, `amd_pcm.stdout.log`, and `amd_pcm.stderr.log`. Very short workloads can produce sparse samples; the memory workload is intentionally sustained to reduce this risk.
+Check `AMDUPROFPCM_SUDO_PASSWORD`, `amd_pcm.stdout.log`, and `amd_pcm.stderr.log`. If a GPU server lacks AMDuProfPcm, report memory bandwidth fields as unavailable and keep the rest of the benchmark metrics.
 
 ## Root Pytest Collects Results
 
@@ -35,4 +35,14 @@ If interrupted, stop orphaned benchmark and AMDuProfPcm processes before startin
 pgrep -af 'benchmark_latency.py|AMDuProfPcm'
 ```
 
-Terminate only matching benchmark/sampler processes. Do not kill vLLM unless it is unhealthy or explicitly being restarted.
+Terminate only matching benchmark/sampler processes. Do not kill the model server unless it is unhealthy or explicitly being restarted.
+
+## GitHub Push Prompts for HTTPS Username
+
+Check credential helper, `.git-credentials`, `.netrc`, `gh`, and SSH. If SSH to `github.com:22` times out but the key is valid, test SSH-over-443:
+
+```bash
+ssh -T -p 443 git@ssh.github.com
+```
+
+Then push with `ssh://git@ssh.github.com:443/<owner>/<repo>.git`.
