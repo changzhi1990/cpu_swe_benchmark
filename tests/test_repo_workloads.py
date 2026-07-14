@@ -63,6 +63,9 @@ def test_memory_lab_bandwidth_bugfix_workload_points_to_repo_template():
     assert "Do not modify tests" in prompt
     assert "VALIDATION_PASSED" in prompt
     assert "Do not create replacement benchmark scripts" in prompt
+    assert "16_000_000" in prompt
+    assert "256" in prompt
+    assert "sustained memory bandwidth" in prompt
 
 
 def test_memory_lab_template_contains_numpy_streaming_bug():
@@ -78,8 +81,8 @@ def test_memory_lab_template_contains_numpy_streaming_bug():
     assert "result += a" in source
     assert "# result += c  # BUG: missing input stream" in source
     assert "        result += c" not in source
-    assert "ELEMENTS = 2_000_000" in test_source
-    assert "PASSES = 32" in test_source
+    assert "ELEMENTS = 16_000_000" in test_source
+    assert "PASSES = 256" in test_source
     assert "np.allclose" in test_source
     assert "for i in range" not in source
 

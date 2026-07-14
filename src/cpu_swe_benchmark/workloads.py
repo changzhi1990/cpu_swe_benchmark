@@ -54,7 +54,8 @@ streaming memory bandwidth kernel is incorrect and the bandwidth tests are
 failing. Fix the source code so the tests pass. The initial implementation
 performs NumPy vectorized streaming reads and writes but omits one input stream,
 so pytest runs the memory-bandwidth-sensitive workload before it fails and again
-after the fix.
+after the fix. The large validation uses 16_000_000 float64 elements and 256
+streaming passes to create sustained memory bandwidth pressure.
 
 Instructions:
 1. Inspect the repository structure.
@@ -71,8 +72,8 @@ Instructions:
 9. Use a Python script with pathlib/read_text/write_text, or rewrite the file
    directly, when editing source code.
 10. Re-run PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py.
-11. Confirm the tests exercise a memory bandwidth workload with large arrays and
-   repeated streaming passes.
+11. Confirm the tests exercise a sustained memory bandwidth workload with
+   16_000_000 float64 elements and 256 repeated streaming passes.
 12. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_bandwidth.py && echo VALIDATION_PASSED
 13. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
 

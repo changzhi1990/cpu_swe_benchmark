@@ -29,6 +29,9 @@ def test_memory_lab_bandwidth_bugfix_prompt_describes_streaming_memory_workload(
     assert "NumPy vectorized streaming" in prompt
     assert "Do not use Python element-wise loops" in prompt
     assert "VALIDATION_PASSED" in prompt
+    assert "16_000_000" in prompt
+    assert "256" in prompt
+    assert "sustained memory bandwidth" in prompt
 
 
 def test_parse_workload_list_supports_default_and_single_workload():

@@ -5,8 +5,8 @@ import numpy as np
 from memory_lab.bandwidth import streaming_triad
 
 
-ELEMENTS = 2_000_000
-PASSES = 32
+ELEMENTS = 16_000_000
+PASSES = 256
 SCALAR = 1.25
 
 
