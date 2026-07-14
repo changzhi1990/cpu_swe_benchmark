@@ -83,6 +83,9 @@ METRIC_GROUP_SPECS: list[dict[str, Any]] = [
             ("gpu_util_p50_percent", "GPU p50"),
             ("gpu_util_p90_percent", "GPU p90"),
             ("gpu_util_max_percent", "GPU max"),
+            ("gpu_memory_bandwidth_util_avg_percent", "GPU memory bandwidth avg"),
+            ("gpu_memory_bandwidth_util_p90_percent", "GPU memory bandwidth p90"),
+            ("gpu_memory_bandwidth_util_max_percent", "GPU memory bandwidth max"),
         ],
     },
     {
@@ -116,6 +119,9 @@ METRIC_GROUP_SPECS: list[dict[str, Any]] = [
             ("workload_gpu_util_p50_percent", "Workload GPU p50"),
             ("workload_gpu_util_p90_percent", "Workload GPU p90"),
             ("workload_gpu_util_max_percent", "Workload GPU max"),
+            ("workload_gpu_memory_bandwidth_util_avg_percent", "Workload GPU memory bandwidth avg"),
+            ("workload_gpu_memory_bandwidth_util_p90_percent", "Workload GPU memory bandwidth p90"),
+            ("workload_gpu_memory_bandwidth_util_max_percent", "Workload GPU memory bandwidth max"),
         ],
     },
 ]

@@ -1,4 +1,5 @@
 from cpu_swe_benchmark.aggregate import aggregate_runs, percentile
+from cpu_swe_benchmark.runner import merge_dcgm_metrics
 from cpu_swe_benchmark.runner import write_global_csv
 from cpu_swe_benchmark.schemas import RunResult
 
@@ -94,6 +95,9 @@ def test_aggregate_runs_reports_model_serving_p90_from_completed_calls():
             "memory_bandwidth_read_max_gbps": 10.0,
             "memory_bandwidth_write_p90_gbps": 4.0,
             "memory_bandwidth_write_max_gbps": 5.0,
+            "gpu_memory_bandwidth_util_avg_percent": 30.0,
+            "gpu_memory_bandwidth_util_p90_percent": 40.0,
+            "gpu_memory_bandwidth_util_max_percent": 50.0,
         },
     )
 
@@ -128,6 +132,9 @@ def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
             "memory_bandwidth_read_max_gbps": 10.0,
             "memory_bandwidth_write_p90_gbps": 4.0,
             "memory_bandwidth_write_max_gbps": 5.0,
+            "gpu_memory_bandwidth_util_avg_percent": 30.0,
+            "gpu_memory_bandwidth_util_p90_percent": 40.0,
+            "gpu_memory_bandwidth_util_max_percent": 50.0,
         },
     )
 
@@ -145,3 +152,29 @@ def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
     assert values["memory_bandwidth_read_max_gbps"] == "10.000000"
     assert values["memory_bandwidth_write_p90_gbps"] == "4.000000"
     assert values["memory_bandwidth_write_max_gbps"] == "5.000000"
+    assert values["gpu_memory_bandwidth_util_avg_percent"] == "30.000000"
+    assert values["gpu_memory_bandwidth_util_p90_percent"] == "40.000000"
+    assert values["gpu_memory_bandwidth_util_max_percent"] == "50.000000"
+
+
+def test_merge_dcgm_metrics_overrides_system_gpu_metrics():
+    system_metrics = {
+        "cpu_util_avg_percent": 42.0,
+        "gpu_util_avg_percent": 0.0,
+        "gpu_memory_bandwidth_util_avg_percent": 0.0,
+        "gpu_memory_used_avg_percent": 98.0,
+    }
+    dcgm_metrics = {
+        "gpu_util_avg_percent": 75.0,
+        "gpu_memory_bandwidth_util_avg_percent": 30.0,
+        "gpu_memory_used_avg_percent": 97.5,
+        "dcgm_sample_count": 8,
+    }
+
+    merged = merge_dcgm_metrics(system_metrics, dcgm_metrics)
+
+    assert merged["cpu_util_avg_percent"] == 42.0
+    assert merged["gpu_util_avg_percent"] == 75.0
+    assert merged["gpu_memory_bandwidth_util_avg_percent"] == 30.0
+    assert merged["gpu_memory_used_avg_percent"] == 97.5
+    assert merged["dcgm_sample_count"] == 8

@@ -7,7 +7,9 @@ from pathlib import Path
 
 from cpu_swe_benchmark.amd_pcm import AMDuProfPcmMemorySampler
 from cpu_swe_benchmark.aggregate import aggregate_runs
+from cpu_swe_benchmark.dcgm_sampler import DCGMGPUSampler
 from cpu_swe_benchmark.schemas import ConcurrencySummary, RunResult, to_jsonable
+from cpu_swe_benchmark.system_metrics import read_basic_system_metrics
 from cpu_swe_benchmark.system_sampler import SystemSampler
 from cpu_swe_benchmark.worker import WorkerConfig, run_worker
 from cpu_swe_benchmark.workloads import Workload
@@ -40,6 +42,18 @@ def endpoint_for_worker(worker_index: int, endpoints: list[str]) -> str:
     return endpoints[worker_index % len(endpoints)]
 
 
+def merge_dcgm_metrics(system_metrics: dict[str, object], dcgm_metrics: dict[str, object]) -> dict[str, object]:
+    merged = dict(system_metrics)
+    if int(dcgm_metrics.get("dcgm_sample_count", 0) or 0) > 0:
+        for key, value in dcgm_metrics.items():
+            merged[key] = value
+    else:
+        for key in ("dcgm_sample_count", "dcgm_error", "dcgm_stdout_log", "dcgm_stderr_log"):
+            if key in dcgm_metrics:
+                merged[key] = dcgm_metrics[key]
+    return merged
+
+
 def run_concurrency_point(
     *,
     workload: Workload,
@@ -63,10 +77,12 @@ def run_concurrency_point(
     batch_start = time.time()
     futures: list[concurrent.futures.Future[RunResult]] = []
     results: list[RunResult] = []
-    sampler = SystemSampler(interval_seconds=1.0)
+    sampler = SystemSampler(interval_seconds=1.0, metrics_reader=read_basic_system_metrics)
     pcm_sampler = AMDuProfPcmMemorySampler(point_dir / "amd_pcm")
+    dcgm_sampler = DCGMGPUSampler(point_dir / "dcgm")
     sampler.start()
     pcm_sampler.start()
+    dcgm_sampler.start()
 
     try:
         with concurrent.futures.ProcessPoolExecutor(max_workers=concurrency) as pool:
@@ -92,8 +108,10 @@ def run_concurrency_point(
             for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
     finally:
+        dcgm_metrics = dcgm_sampler.stop()
         pcm_metrics = pcm_sampler.stop()
         system_metrics = sampler.stop()
+        system_metrics = merge_dcgm_metrics(system_metrics, dcgm_metrics)
         system_metrics.update(pcm_metrics)
 
     batch_wall = time.time() - batch_start
@@ -154,6 +172,10 @@ def write_global_csv(summaries: list[ConcurrencySummary], output_dir: Path) -> P
         "gpu_util_p50_percent",
         "gpu_util_p90_percent",
         "gpu_util_max_percent",
+        "gpu_memory_bandwidth_util_avg_percent",
+        "gpu_memory_bandwidth_util_p50_percent",
+        "gpu_memory_bandwidth_util_p90_percent",
+        "gpu_memory_bandwidth_util_max_percent",
         "gpu_memory_used_avg_percent",
         "gpu_memory_used_max_percent",
         "workload_cpu_util_avg_percent",
@@ -166,6 +188,10 @@ def write_global_csv(summaries: list[ConcurrencySummary], output_dir: Path) -> P
         "workload_gpu_util_p50_percent",
         "workload_gpu_util_p90_percent",
         "workload_gpu_util_max_percent",
+        "workload_gpu_memory_bandwidth_util_avg_percent",
+        "workload_gpu_memory_bandwidth_util_p50_percent",
+        "workload_gpu_memory_bandwidth_util_p90_percent",
+        "workload_gpu_memory_bandwidth_util_max_percent",
         "workload_gpu_memory_used_avg_percent",
         "workload_gpu_memory_used_max_percent",
     ]
@@ -207,6 +233,10 @@ def write_global_csv(summaries: list[ConcurrencySummary], output_dir: Path) -> P
             f"{summary.system_metrics.get('gpu_util_p50_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('gpu_util_p90_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('gpu_util_max_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('gpu_memory_bandwidth_util_avg_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('gpu_memory_bandwidth_util_p50_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('gpu_memory_bandwidth_util_p90_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('gpu_memory_bandwidth_util_max_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('gpu_memory_used_avg_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('gpu_memory_used_max_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('workload_cpu_util_avg_percent', 0.0):.6f}",
@@ -219,6 +249,10 @@ def write_global_csv(summaries: list[ConcurrencySummary], output_dir: Path) -> P
             f"{summary.system_metrics.get('workload_gpu_util_p50_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('workload_gpu_util_p90_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('workload_gpu_util_max_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('workload_gpu_memory_bandwidth_util_avg_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('workload_gpu_memory_bandwidth_util_p50_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('workload_gpu_memory_bandwidth_util_p90_percent', 0.0):.6f}",
+            f"{summary.system_metrics.get('workload_gpu_memory_bandwidth_util_max_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('workload_gpu_memory_used_avg_percent', 0.0):.6f}",
             f"{summary.system_metrics.get('workload_gpu_memory_used_max_percent', 0.0):.6f}",
         ]

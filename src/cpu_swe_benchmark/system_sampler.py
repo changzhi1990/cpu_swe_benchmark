@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from typing import Any
 
 from cpu_swe_benchmark.aggregate import mean, percentile
@@ -17,10 +18,12 @@ def summarize_system_samples(samples: list[dict[str, Any]], prefix: str = "") ->
     memory_values = _numeric([sample.get("memory", {}).get("used_percent") for sample in samples])
     gpu_util_values = []
     gpu_memory_values = []
+    gpu_memory_bandwidth_util_values = []
     for sample in samples:
         for gpu in sample.get("gpus", []):
             gpu_util_values.extend(_numeric([gpu.get("utilization_gpu_percent")]))
             gpu_memory_values.extend(_numeric([gpu.get("memory_used_percent")]))
+            gpu_memory_bandwidth_util_values.extend(_numeric([gpu.get("memory_bandwidth_util_percent")]))
     return {
         f"{prefix}cpu_util_avg_percent": mean(cpu_values),
         f"{prefix}cpu_util_p50_percent": percentile(cpu_values, 50),
@@ -32,14 +35,21 @@ def summarize_system_samples(samples: list[dict[str, Any]], prefix: str = "") ->
         f"{prefix}gpu_util_p50_percent": percentile(gpu_util_values, 50),
         f"{prefix}gpu_util_p90_percent": percentile(gpu_util_values, 90),
         f"{prefix}gpu_util_max_percent": max(gpu_util_values) if gpu_util_values else 0.0,
+        f"{prefix}gpu_memory_bandwidth_util_avg_percent": mean(gpu_memory_bandwidth_util_values),
+        f"{prefix}gpu_memory_bandwidth_util_p50_percent": percentile(gpu_memory_bandwidth_util_values, 50),
+        f"{prefix}gpu_memory_bandwidth_util_p90_percent": percentile(gpu_memory_bandwidth_util_values, 90),
+        f"{prefix}gpu_memory_bandwidth_util_max_percent": (
+            max(gpu_memory_bandwidth_util_values) if gpu_memory_bandwidth_util_values else 0.0
+        ),
         f"{prefix}gpu_memory_used_avg_percent": mean(gpu_memory_values),
         f"{prefix}gpu_memory_used_max_percent": max(gpu_memory_values) if gpu_memory_values else 0.0,
     }
 
 
 class SystemSampler:
-    def __init__(self, interval_seconds: float = 1.0):
+    def __init__(self, interval_seconds: float = 1.0, metrics_reader: Callable[[], dict[str, Any]] = read_system_metrics):
         self.interval_seconds = interval_seconds
+        self.metrics_reader = metrics_reader
         self.samples: list[dict[str, Any]] = []
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -60,7 +70,7 @@ class SystemSampler:
     def _run(self) -> None:
         while not self._stop.is_set():
             try:
-                self.samples.append(read_system_metrics())
+                self.samples.append(self.metrics_reader())
             except Exception as exc:
                 self.samples.append({"error": str(exc), "timestamp": time.time()})
             self._stop.wait(self.interval_seconds)

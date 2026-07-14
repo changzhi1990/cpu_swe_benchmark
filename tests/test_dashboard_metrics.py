@@ -1,7 +1,9 @@
 from pathlib import Path
+import subprocess
 
 from cpu_swe_benchmark.business_metrics import build_metric_groups, discover_runs, load_business_summary
-from cpu_swe_benchmark.system_metrics import parse_cpu_utilization, parse_loadavg, parse_meminfo
+from cpu_swe_benchmark import system_metrics
+from cpu_swe_benchmark.system_metrics import parse_cpu_utilization, parse_loadavg, parse_meminfo, read_basic_system_metrics
 
 
 def test_parse_cpu_utilization_from_two_proc_stat_snapshots():
@@ -27,6 +29,39 @@ def test_parse_meminfo_returns_used_and_total_percent():
     assert parsed["total_bytes"] == 1024000000
     assert parsed["available_bytes"] == 256000000
     assert parsed["used_percent"] == 75.0
+
+
+def test_read_gpu_metrics_includes_memory_bandwidth_utilization(monkeypatch):
+    def fake_run(*args, **kwargs):
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout="0, NVIDIA GeForce RTX 5090, 1234, 32607, 42, 17\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr(system_metrics.subprocess, "run", fake_run)
+
+    gpus = system_metrics.read_gpu_metrics()
+
+    assert gpus[0]["memory_used_percent"] == 3.78
+    assert gpus[0]["utilization_gpu_percent"] == 42.0
+    assert gpus[0]["memory_bandwidth_util_percent"] == 17.0
+
+
+def test_read_basic_system_metrics_excludes_expensive_gpu_and_container_calls(monkeypatch):
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("basic metrics must not spawn subprocesses")
+
+    monkeypatch.setattr(system_metrics.subprocess, "run", fail_if_called)
+
+    metrics = read_basic_system_metrics()
+
+    assert "cpu" in metrics
+    assert "load" in metrics
+    assert "memory" in metrics
+    assert "gpus" not in metrics
+    assert "vllm_container" not in metrics
 
 
 def test_discover_runs_and_load_business_summary(tmp_path: Path):

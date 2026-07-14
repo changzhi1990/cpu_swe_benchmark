@@ -64,7 +64,7 @@ def read_cpu_utilization(proc_stat: Path = Path("/proc/stat")) -> float:
 
 
 def read_gpu_metrics() -> list[dict[str, Any]]:
-    query = "index,name,memory.used,memory.total,utilization.gpu"
+    query = "index,name,memory.used,memory.total,utilization.gpu,utilization.memory"
     try:
         result = subprocess.run(
             ["nvidia-smi", f"--query-gpu={query}", "--format=csv,noheader,nounits"],
@@ -78,9 +78,9 @@ def read_gpu_metrics() -> list[dict[str, Any]]:
     gpus = []
     for line in result.stdout.splitlines():
         parts = [part.strip() for part in line.split(",")]
-        if len(parts) != 5:
+        if len(parts) != 6:
             continue
-        index, name, mem_used, mem_total, util = parts
+        index, name, mem_used, mem_total, util, memory_bandwidth_util = parts
         total = float(mem_total)
         used = float(mem_used)
         gpus.append(
@@ -91,6 +91,7 @@ def read_gpu_metrics() -> list[dict[str, Any]]:
                 "memory_total_mib": total,
                 "memory_used_percent": round((used / total) * 100.0, 2) if total else 0.0,
                 "utilization_gpu_percent": float(util),
+                "memory_bandwidth_util_percent": float(memory_bandwidth_util),
             }
         )
     return gpus
@@ -118,4 +119,13 @@ def read_system_metrics() -> dict[str, Any]:
         "memory": parse_meminfo(Path("/proc/meminfo").read_text(encoding="utf-8")),
         "gpus": read_gpu_metrics(),
         "vllm_container": read_container_status(),
+    }
+
+
+def read_basic_system_metrics() -> dict[str, Any]:
+    return {
+        "timestamp": time.time(),
+        "cpu": {"utilization_percent": read_cpu_utilization()},
+        "load": parse_loadavg(Path("/proc/loadavg").read_text(encoding="utf-8")),
+        "memory": parse_meminfo(Path("/proc/meminfo").read_text(encoding="utf-8")),
     }
