@@ -28,6 +28,7 @@ from cpu_swe_benchmark.runner import (  # noqa: E402
     parse_concurrency_levels,
     parse_endpoints,
     run_concurrency_point,
+    write_categorized_csvs,
     write_global_csv,
 )
 from cpu_swe_benchmark.schemas import ConcurrencySummary, to_jsonable  # noqa: E402
@@ -104,11 +105,14 @@ class LatencyBenchmarker:
 
     def _write_global_outputs(self, summaries: list[ConcurrencySummary]) -> None:
         csv_path = write_global_csv(summaries, self.output_dir)
+        categorized_paths = write_categorized_csvs(summaries, self.output_dir)
         (self.output_dir / "global_summary.json").write_text(
             json.dumps([to_jsonable(summary) for summary in summaries], indent=2),
             encoding="utf-8",
         )
         print(f"[benchmark] wrote {csv_path}")
+        for path in categorized_paths.values():
+            print(f"[benchmark] wrote {path}")
 
 
 def build_parser() -> argparse.ArgumentParser:

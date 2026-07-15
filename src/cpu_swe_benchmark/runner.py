@@ -277,3 +277,115 @@ def write_global_csv(summaries: list[ConcurrencySummary], output_dir: Path) -> P
         lines.append(",".join(row))
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
+
+
+CATEGORIZED_CSV_COLUMNS: dict[str, list[str]] = {
+    "business_results": [
+        "workload",
+        "concurrency",
+        "submitted_tasks",
+        "successful_tasks",
+        "failed_tasks",
+        "success_rate",
+        "throughput_successful_tasks_per_sec",
+        "E2E_p90_seconds",
+    ],
+    "llm_serving": [
+        "workload",
+        "concurrency",
+        "TTFT_p90",
+        "TPOT_p90",
+        "llm_input_tokens_total",
+        "llm_output_tokens_total",
+        "llm_total_tokens_total",
+        "llm_input_tokens_per_sec",
+        "llm_output_tokens_per_sec",
+        "llm_total_tokens_per_sec",
+        "avg_input_tokens_per_task",
+        "avg_output_tokens_per_task",
+        "avg_total_tokens_per_task",
+        "avg_llm_time_seconds_per_task",
+        "avg_model_calls_per_task",
+    ],
+    "cpu_memory": [
+        "workload",
+        "concurrency",
+        "cpu_util_avg_percent",
+        "cpu_util_p50_percent",
+        "cpu_util_p90_percent",
+        "cpu_util_max_percent",
+        "workload_cpu_util_avg_percent",
+        "workload_cpu_util_p90_percent",
+        "workload_cpu_util_max_percent",
+        "memory_used_avg_percent",
+        "memory_used_max_percent",
+        "memory_bandwidth_total_p90_gbps",
+        "memory_bandwidth_read_p90_gbps",
+        "memory_bandwidth_write_p90_gbps",
+    ],
+    "gpu_metrics": [
+        "workload",
+        "concurrency",
+        "gpu_util_avg_percent",
+        "gpu_util_p50_percent",
+        "gpu_util_p90_percent",
+        "gpu_util_max_percent",
+        "gpu_memory_bandwidth_util_avg_percent",
+        "gpu_memory_bandwidth_util_p90_percent",
+        "gpu_memory_bandwidth_util_max_percent",
+        "gpu_memory_used_avg_percent",
+        "gpu_memory_used_max_percent",
+        "workload_gpu_util_avg_percent",
+        "workload_gpu_util_p90_percent",
+        "workload_gpu_memory_bandwidth_util_avg_percent",
+        "workload_gpu_memory_bandwidth_util_p90_percent",
+        "workload_gpu_memory_used_avg_percent",
+    ],
+}
+
+
+def _summary_csv_value(summary: ConcurrencySummary, column: str) -> str:
+    string_values = {
+        "workload": summary.workload,
+        "concurrency": str(summary.concurrency),
+        "submitted_tasks": str(summary.submitted_tasks),
+        "successful_tasks": str(summary.successful_tasks),
+        "failed_tasks": str(summary.failed_tasks),
+        "llm_input_tokens_total": str(summary.llm_input_tokens_total),
+        "llm_output_tokens_total": str(summary.llm_output_tokens_total),
+        "llm_total_tokens_total": str(summary.llm_total_tokens_total),
+    }
+    if column in string_values:
+        return string_values[column]
+
+    direct_values = {
+        "success_rate": summary.success_rate,
+        "throughput_successful_tasks_per_sec": summary.throughput_successful_tasks_per_sec,
+        "E2E_p90_seconds": summary.latency_seconds.get("p90", 0.0),
+        "TTFT_p90": summary.model_serving_seconds.get("ttft_p90", 0.0),
+        "TPOT_p90": summary.model_serving_seconds.get("tpot_p90", 0.0),
+        "llm_input_tokens_per_sec": summary.llm_input_tokens_per_sec,
+        "llm_output_tokens_per_sec": summary.llm_output_tokens_per_sec,
+        "llm_total_tokens_per_sec": summary.llm_total_tokens_per_sec,
+        "avg_input_tokens_per_task": summary.avg_input_tokens_per_task,
+        "avg_output_tokens_per_task": summary.avg_output_tokens_per_task,
+        "avg_total_tokens_per_task": summary.avg_total_tokens_per_task,
+        "avg_llm_time_seconds_per_task": summary.avg_llm_time_seconds_per_task,
+        "avg_model_calls_per_task": summary.avg_model_calls_per_task,
+    }
+    if column in direct_values:
+        return f"{direct_values[column]:.6f}"
+
+    return f"{summary.system_metrics.get(column, 0.0):.6f}"
+
+
+def write_categorized_csvs(summaries: list[ConcurrencySummary], output_dir: Path) -> dict[str, Path]:
+    paths: dict[str, Path] = {}
+    for name, columns in CATEGORIZED_CSV_COLUMNS.items():
+        path = output_dir / f"{name}.csv"
+        lines = [",".join(columns)]
+        for summary in summaries:
+            lines.append(",".join(_summary_csv_value(summary, column) for column in columns))
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        paths[name] = path
+    return paths

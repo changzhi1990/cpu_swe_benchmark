@@ -1,5 +1,6 @@
 from cpu_swe_benchmark.aggregate import aggregate_runs, percentile
 from cpu_swe_benchmark.runner import merge_dcgm_metrics
+from cpu_swe_benchmark.runner import write_categorized_csvs
 from cpu_swe_benchmark.runner import write_global_csv
 from cpu_swe_benchmark.schemas import RunResult
 
@@ -224,3 +225,52 @@ def test_merge_dcgm_metrics_overrides_system_gpu_metrics():
     assert merged["gpu_memory_bandwidth_util_avg_percent"] == 30.0
     assert merged["gpu_memory_used_avg_percent"] == 97.5
     assert merged["dcgm_sample_count"] == 8
+
+
+def test_write_categorized_csvs_creates_report_friendly_tables(tmp_path):
+    summary = aggregate_runs(
+        [
+            make_run(
+                "r1",
+                wall=10.0,
+                model_call_log=[{"status": "completed", "prompt_tokens": 100, "completion_tokens": 20}],
+            ),
+            make_run(
+                "r2",
+                wall=20.0,
+                model_call_log=[{"status": "completed", "prompt_tokens": 60, "completion_tokens": 10}],
+            ),
+        ],
+        workload="sorting",
+        concurrency=2,
+        model="qwen2.5-coder-32b",
+        base_url="http://localhost:8000/v1",
+        vllm_topology="tp8",
+        batch_wall_time_seconds=20.0,
+        system_metrics={
+            "cpu_util_p90_percent": 75.0,
+            "memory_bandwidth_total_p90_gbps": 300.0,
+            "gpu_util_avg_percent": 80.0,
+            "gpu_memory_used_avg_percent": 90.0,
+        },
+    )
+
+    paths = write_categorized_csvs([summary], tmp_path)
+
+    assert set(paths) == {"business_results", "llm_serving", "cpu_memory", "gpu_metrics"}
+    business_header, business_row = (tmp_path / "business_results.csv").read_text(encoding="utf-8").splitlines()
+    llm_header, llm_row = (tmp_path / "llm_serving.csv").read_text(encoding="utf-8").splitlines()
+    cpu_header, cpu_row = (tmp_path / "cpu_memory.csv").read_text(encoding="utf-8").splitlines()
+    gpu_header, gpu_row = (tmp_path / "gpu_metrics.csv").read_text(encoding="utf-8").splitlines()
+
+    assert business_header == (
+        "workload,concurrency,submitted_tasks,successful_tasks,failed_tasks,"
+        "success_rate,throughput_successful_tasks_per_sec,E2E_p90_seconds"
+    )
+    assert business_row == "sorting,2,2,2,0,1.000000,0.100000,20.000000"
+    assert "llm_input_tokens_per_sec,llm_output_tokens_per_sec,llm_total_tokens_per_sec" in llm_header
+    assert "8.000000,1.500000,9.500000" in llm_row
+    assert "cpu_util_p90_percent" in cpu_header
+    assert "75.000000" in cpu_row
+    assert "gpu_util_avg_percent" in gpu_header
+    assert "80.000000" in gpu_row
