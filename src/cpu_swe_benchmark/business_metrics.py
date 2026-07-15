@@ -64,6 +64,16 @@ METRIC_GROUP_SPECS: list[dict[str, Any]] = [
         ],
     },
     {
+        "key": "llm_tokens",
+        "title": "LLM Token Throughput",
+        "unit": "tokens/s",
+        "metrics": [
+            ("llm_input_tokens_per_sec", "Input tokens/s"),
+            ("llm_output_tokens_per_sec", "Output tokens/s"),
+            ("llm_total_tokens_per_sec", "Total tokens/s"),
+        ],
+    },
+    {
         "key": "system_cpu",
         "title": "CPU Utilization by Concurrency",
         "unit": "percent",

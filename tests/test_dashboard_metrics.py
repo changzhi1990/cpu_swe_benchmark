@@ -104,6 +104,9 @@ def test_build_metric_groups_classifies_business_metrics_for_charts():
             "avg_bash_time_seconds_per_task": 28.0,
             "avg_model_calls_per_task": 3.0,
             "avg_bash_calls_per_task": 3.0,
+            "llm_input_tokens_per_sec": 100.0,
+            "llm_output_tokens_per_sec": 20.0,
+            "llm_total_tokens_per_sec": 120.0,
             "cpu_util_avg_percent": 20.0,
             "cpu_util_p50_percent": 20.0,
             "cpu_util_p90_percent": 25.0,
@@ -138,6 +141,9 @@ def test_build_metric_groups_classifies_business_metrics_for_charts():
             "avg_bash_time_seconds_per_task": 29.0,
             "avg_model_calls_per_task": 3.0,
             "avg_bash_calls_per_task": 3.0,
+            "llm_input_tokens_per_sec": 140.0,
+            "llm_output_tokens_per_sec": 25.0,
+            "llm_total_tokens_per_sec": 165.0,
             "cpu_util_avg_percent": 30.0,
             "cpu_util_p50_percent": 30.0,
             "cpu_util_p90_percent": 35.0,
@@ -166,6 +172,7 @@ def test_build_metric_groups_classifies_business_metrics_for_charts():
         "latency",
         "timing",
         "calls",
+        "llm_tokens",
         "system_cpu",
         "system_gpu",
         "system_memory",
@@ -176,7 +183,9 @@ def test_build_metric_groups_classifies_business_metrics_for_charts():
     assert groups[3]["series"][0]["key"] == "latency_p50"
     assert groups[3]["series"][0]["points"] == [{"x": 1, "y": 34.0}, {"x": 2, "y": 34.5}]
     assert groups[4]["series"][0]["key"] == "avg_llm_time_seconds_per_task"
-    assert groups[6]["title"] == "CPU Utilization by Concurrency"
-    assert groups[6]["series"][0]["key"] == "cpu_util_avg_percent"
-    assert groups[9]["title"] == "Workload CPU Utilization"
-    assert groups[9]["series"][0]["key"] == "workload_cpu_util_avg_percent"
+    assert groups[6]["title"] == "LLM Token Throughput"
+    assert groups[6]["series"][0]["key"] == "llm_input_tokens_per_sec"
+    assert groups[7]["title"] == "CPU Utilization by Concurrency"
+    assert groups[7]["series"][0]["key"] == "cpu_util_avg_percent"
+    assert groups[10]["title"] == "Workload CPU Utilization"
+    assert groups[10]["series"][0]["key"] == "workload_cpu_util_avg_percent"

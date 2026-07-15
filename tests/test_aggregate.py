@@ -105,6 +105,43 @@ def test_aggregate_runs_reports_model_serving_p90_from_completed_calls():
     assert summary.model_serving_seconds["tpot_p90"] == 0.04
 
 
+def test_aggregate_runs_reports_llm_token_totals_and_throughput():
+    summary = aggregate_runs(
+        [
+            make_run(
+                "r1",
+                model_call_log=[
+                    {"status": "completed", "prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120},
+                    {"status": "completed", "prompt_tokens": 80, "completion_tokens": 10, "total_tokens": 90},
+                ],
+            ),
+            make_run(
+                "r2",
+                model_call_log=[
+                    {"status": "completed", "prompt_tokens": 60, "completion_tokens": 30, "total_tokens": 90},
+                    {"status": "error", "prompt_tokens": 999, "completion_tokens": 999, "total_tokens": 1998},
+                ],
+            ),
+        ],
+        workload="sorting",
+        concurrency=2,
+        model="qwen2.5-coder-32b",
+        base_url="http://localhost:8000/v1",
+        vllm_topology="tp8",
+        batch_wall_time_seconds=10.0,
+    )
+
+    assert summary.llm_input_tokens_total == 240
+    assert summary.llm_output_tokens_total == 60
+    assert summary.llm_total_tokens_total == 300
+    assert summary.llm_input_tokens_per_sec == 24.0
+    assert summary.llm_output_tokens_per_sec == 6.0
+    assert summary.llm_total_tokens_per_sec == 30.0
+    assert summary.avg_input_tokens_per_task == 120.0
+    assert summary.avg_output_tokens_per_task == 30.0
+    assert summary.avg_total_tokens_per_task == 150.0
+
+
 def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
     summary = aggregate_runs(
         [
@@ -146,6 +183,15 @@ def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
     assert values["E2E_p90_seconds"] == "20.000000"
     assert values["TTFT_p90"] == "0.400000"
     assert values["TPOT_p90"] == "0.040000"
+    assert values["llm_input_tokens_total"] == "0"
+    assert values["llm_output_tokens_total"] == "0"
+    assert values["llm_total_tokens_total"] == "0"
+    assert values["llm_input_tokens_per_sec"] == "0.000000"
+    assert values["llm_output_tokens_per_sec"] == "0.000000"
+    assert values["llm_total_tokens_per_sec"] == "0.000000"
+    assert values["avg_input_tokens_per_task"] == "0.000000"
+    assert values["avg_output_tokens_per_task"] == "0.000000"
+    assert values["avg_total_tokens_per_task"] == "0.000000"
     assert values["memory_bandwidth_total_p90_gbps"] == "12.500000"
     assert values["memory_bandwidth_total_max_gbps"] == "15.000000"
     assert values["memory_bandwidth_read_p90_gbps"] == "8.500000"

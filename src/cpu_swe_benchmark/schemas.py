@@ -84,6 +84,15 @@ class ConcurrencySummary:
     avg_llm_time_seconds_per_task: float
     avg_bash_time_seconds_per_task: float
     avg_framework_overhead_seconds_per_task: float
+    llm_input_tokens_total: int = 0
+    llm_output_tokens_total: int = 0
+    llm_total_tokens_total: int = 0
+    llm_input_tokens_per_sec: float = 0.0
+    llm_output_tokens_per_sec: float = 0.0
+    llm_total_tokens_per_sec: float = 0.0
+    avg_input_tokens_per_task: float = 0.0
+    avg_output_tokens_per_task: float = 0.0
+    avg_total_tokens_per_task: float = 0.0
     model_serving_seconds: dict[str, float] = field(default_factory=dict)
     system_metrics: dict[str, float] = field(default_factory=dict)
     runs: list[dict[str, Any]] = field(default_factory=list)

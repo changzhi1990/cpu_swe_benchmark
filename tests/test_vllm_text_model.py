@@ -51,6 +51,9 @@ def test_vllm_text_model_records_streaming_ttft_and_tpot(monkeypatch):
     assert response["extra"]["actions"] == [{"command": "echo ok"}]
     assert model.call_log[0]["ttft_seconds"] == 0.25
     assert model.call_log[0]["tpot_seconds"] == 0.125
+    assert model.call_log[0]["prompt_tokens"] == 10
+    assert model.call_log[0]["completion_tokens"] == 5
+    assert model.call_log[0]["total_tokens"] == 15
 
 
 def test_vllm_text_model_defaults_to_compact_completion_budget():

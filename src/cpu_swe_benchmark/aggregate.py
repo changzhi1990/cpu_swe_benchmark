@@ -32,6 +32,20 @@ def model_call_values(runs: list[RunResult], key: str) -> list[float]:
     return values
 
 
+def model_call_token_totals(runs: list[RunResult]) -> tuple[int, int, int]:
+    input_tokens = 0
+    output_tokens = 0
+    for run in runs:
+        for call in run.model_call_log:
+            if call.get("status") != "completed":
+                continue
+            prompt_tokens = int(call.get("prompt_tokens") or 0)
+            completion_tokens = int(call.get("completion_tokens") or 0)
+            input_tokens += prompt_tokens
+            output_tokens += completion_tokens
+    return input_tokens, output_tokens, input_tokens + output_tokens
+
+
 def aggregate_runs(
     runs: list[RunResult],
     *,
@@ -54,6 +68,7 @@ def aggregate_runs(
     bash_times = [run.bash_time_total_seconds for run in runs]
     ttft_values = model_call_values(runs, "ttft_seconds")
     tpot_values = model_call_values(runs, "tpot_seconds")
+    input_tokens_total, output_tokens_total, total_tokens_total = model_call_token_totals(runs)
     framework_times = [
         max(0.0, run.total_wall_time_seconds - run.llm_time_total_seconds - run.bash_time_total_seconds)
         for run in runs
@@ -102,6 +117,15 @@ def aggregate_runs(
         avg_llm_time_seconds_per_task=mean(llm_times),
         avg_bash_time_seconds_per_task=mean(bash_times),
         avg_framework_overhead_seconds_per_task=mean(framework_times),
+        llm_input_tokens_total=input_tokens_total,
+        llm_output_tokens_total=output_tokens_total,
+        llm_total_tokens_total=total_tokens_total,
+        llm_input_tokens_per_sec=rate(input_tokens_total),
+        llm_output_tokens_per_sec=rate(output_tokens_total),
+        llm_total_tokens_per_sec=rate(total_tokens_total),
+        avg_input_tokens_per_task=input_tokens_total / submitted if submitted else 0.0,
+        avg_output_tokens_per_task=output_tokens_total / submitted if submitted else 0.0,
+        avg_total_tokens_per_task=total_tokens_total / submitted if submitted else 0.0,
         model_serving_seconds={
             "ttft_p50": percentile(ttft_values, 50),
             "ttft_p90": percentile(ttft_values, 90),
