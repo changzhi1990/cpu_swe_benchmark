@@ -126,6 +126,12 @@ def run_worker(config: WorkerConfig) -> RunResult:
     workload_system_metrics = summarize_system_samples(workload_samples, prefix="workload_") if workload_samples else {}
     prompt_tokens = sum(int(call.get("prompt_tokens", 0)) for call in model.call_log)
     completion_tokens = sum(int(call.get("completion_tokens", 0)) for call in model.call_log)
+    total_tokens = sum(
+        int(call.get("total_tokens") or 0)
+        if int(call.get("total_tokens") or 0) > 0
+        else int(call.get("prompt_tokens") or 0) + int(call.get("completion_tokens") or 0)
+        for call in model.call_log
+    )
     run_result = RunResult(
         run_id=config.run_id,
         workload=config.workload.name,
@@ -143,6 +149,7 @@ def run_worker(config: WorkerConfig) -> RunResult:
         error=error,
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
         workload_system_metrics=workload_system_metrics,
         workspace=str(workspace),
         task_timeout_seconds=config.task_timeout_seconds,

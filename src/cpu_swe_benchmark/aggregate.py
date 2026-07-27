@@ -32,18 +32,24 @@ def model_call_values(runs: list[RunResult], key: str) -> list[float]:
     return values
 
 
-def model_call_token_totals(runs: list[RunResult]) -> tuple[int, int, int]:
+def model_call_token_totals(runs: list[RunResult], *, prefer_reported_total: bool = True) -> tuple[int, int, int]:
     input_tokens = 0
     output_tokens = 0
+    total_tokens = 0
     for run in runs:
         for call in run.model_call_log:
             if call.get("status") != "completed":
                 continue
             prompt_tokens = int(call.get("prompt_tokens") or 0)
             completion_tokens = int(call.get("completion_tokens") or 0)
+            reported_total_tokens = int(call.get("total_tokens") or 0)
             input_tokens += prompt_tokens
             output_tokens += completion_tokens
-    return input_tokens, output_tokens, input_tokens + output_tokens
+            if prefer_reported_total and reported_total_tokens > 0:
+                total_tokens += reported_total_tokens
+            else:
+                total_tokens += prompt_tokens + completion_tokens
+    return input_tokens, output_tokens, total_tokens
 
 
 def aggregate_runs(
@@ -69,6 +75,11 @@ def aggregate_runs(
     ttft_values = model_call_values(runs, "ttft_seconds")
     tpot_values = model_call_values(runs, "tpot_seconds")
     input_tokens_total, output_tokens_total, total_tokens_total = model_call_token_totals(runs)
+    successful_runs = [run for run in runs if run.status == "success"]
+    successful_input_tokens_total, successful_output_tokens_total, successful_total_tokens_total = model_call_token_totals(
+        successful_runs,
+        prefer_reported_total=False,
+    )
     framework_times = [
         max(0.0, run.total_wall_time_seconds - run.llm_time_total_seconds - run.bash_time_total_seconds)
         for run in runs
@@ -120,12 +131,17 @@ def aggregate_runs(
         llm_input_tokens_total=input_tokens_total,
         llm_output_tokens_total=output_tokens_total,
         llm_total_tokens_total=total_tokens_total,
+        successful_agent_input_tokens_total=successful_input_tokens_total,
+        successful_agent_output_tokens_total=successful_output_tokens_total,
+        successful_agent_total_tokens_total=successful_total_tokens_total,
         llm_input_tokens_per_sec=rate(input_tokens_total),
         llm_output_tokens_per_sec=rate(output_tokens_total),
         llm_total_tokens_per_sec=rate(total_tokens_total),
+        successful_agent_total_tokens_per_sec=rate(successful_total_tokens_total),
         avg_input_tokens_per_task=input_tokens_total / submitted if submitted else 0.0,
         avg_output_tokens_per_task=output_tokens_total / submitted if submitted else 0.0,
         avg_total_tokens_per_task=total_tokens_total / submitted if submitted else 0.0,
+        avg_total_tokens_per_successful_agent=successful_total_tokens_total / successful if successful else 0.0,
         model_serving_seconds={
             "ttft_p50": percentile(ttft_values, 50),
             "ttft_p90": percentile(ttft_values, 90),

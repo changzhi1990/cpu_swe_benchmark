@@ -51,6 +51,7 @@ class RunResult:
     error: str | None
     prompt_tokens: int = 0
     completion_tokens: int = 0
+    total_tokens: int = 0
     workload_system_metrics: dict[str, float] = field(default_factory=dict)
     workspace: str | None = None
     task_timeout_seconds: int = 600
@@ -87,12 +88,17 @@ class ConcurrencySummary:
     llm_input_tokens_total: int = 0
     llm_output_tokens_total: int = 0
     llm_total_tokens_total: int = 0
+    successful_agent_input_tokens_total: int = 0
+    successful_agent_output_tokens_total: int = 0
+    successful_agent_total_tokens_total: int = 0
     llm_input_tokens_per_sec: float = 0.0
     llm_output_tokens_per_sec: float = 0.0
     llm_total_tokens_per_sec: float = 0.0
+    successful_agent_total_tokens_per_sec: float = 0.0
     avg_input_tokens_per_task: float = 0.0
     avg_output_tokens_per_task: float = 0.0
     avg_total_tokens_per_task: float = 0.0
+    avg_total_tokens_per_successful_agent: float = 0.0
     model_serving_seconds: dict[str, float] = field(default_factory=dict)
     system_metrics: dict[str, float] = field(default_factory=dict)
     runs: list[dict[str, Any]] = field(default_factory=list)

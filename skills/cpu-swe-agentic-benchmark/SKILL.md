@@ -58,7 +58,7 @@ or average system power, and measure it over the same batch window as `batch_wal
 6. Set `AMDUPROFPCM_SUDO_PASSWORD` only in the current shell when AMDuProfPcm needs sudo.
 7. Run the requested sweep with `scripts/run_benchmark_sweep.sh` from this skill or with `benchmark_latency.py` directly.
 8. Wait for completion; do not report success before verification.
-9. Summarize with `scripts/summarize_benchmark.py`.
+9. Summarize runsets with `scripts/aggregate_standard_metrics.py` so `global_metrics.csv`, `cpu_metrics.csv`, `gpu_metrics.csv`, and `vllm_metrics.csv` exist.
 10. Report output directory, log path, success rates, E2E p90, TTFT p90, TPOT p90, run results, and relevant system metrics.
 
 ## Useful Commands
@@ -89,6 +89,13 @@ python3 skills/cpu-swe-agentic-benchmark/scripts/summarize_benchmark.py \
   results/<run_dir>
 ```
 
+Aggregate standard runset metrics:
+
+```bash
+python3 scripts/aggregate_standard_metrics.py \
+  results/<runset_dir>
+```
+
 ## Verification Checklist
 
 Before claiming a benchmark run is complete, verify:
@@ -96,9 +103,12 @@ Before claiming a benchmark run is complete, verify:
 - benchmark exit code is `0`
 - `global_summary.csv` exists
 - row count matches requested workload/concurrency combinations
-- `success_rate` and `run_results` are present
+- runset `global_metrics.csv`, `cpu_metrics.csv`, `gpu_metrics.csv`, and `vllm_metrics.csv` exist with one row per requested concurrency
+- each standard metrics table includes task counts, `success_rate`, `E2E_p90_seconds`, `TTFT_p90`, `TPOT_p90`, run paths, CPU affinity, vLLM affinity, and task timeout
 - TTFT/TPOT/E2E metrics are present and nonzero for successful model runs
 - memory bandwidth fields are present when AMDuProfPcm ran
+- AVT effective-frequency fields are present in `cpu_metrics.csv` when AVT sampling ran
+- CPU, GPU, vLLM, and general benchmark fields are all present in `global_metrics.csv`
 - benchmark log has no traceback, connection refused, EngineDeadError, CUDA OOM, or unexpected failures
 - model and dashboard metrics endpoints are reachable if expected to remain up
 
@@ -108,6 +118,9 @@ Before claiming a benchmark run is complete, verify:
 - Agents fix the same bug type in separate copied repositories; they do not edit one shared repo.
 - Stable task shape makes concurrency points comparable across GPU servers.
 - Use `PYTHONPATH=src python3 -m pytest tests -q` for project tests. Root `pytest -q` may collect historical `results/` workspaces.
+- For high-concurrency points such as 512+, start the run shell with `ulimit -n 1048576` before spawning agents.
+- For AVT effective frequency, map Linux CPUs through kernel `physical_package_id` and `core_id`; do not treat `AMDCpuTopology` `Thread` as the Linux CPU number.
+- On the 5090 server profile, bind vLLM to Linux CPUs `0-7` and bind agents to Linux CPUs `8-760` for every sweep point. Record these as `vllm_cpuset` and `agent_cpuset`.
 
 ## References
 

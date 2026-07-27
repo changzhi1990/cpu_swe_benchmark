@@ -79,6 +79,19 @@ The root output directory also gets:
 - `global_summary.csv`
 - `global_summary.json`
 
+Runset-level sweep directories standardize analysis metrics into one all-in-one table plus three domain views:
+
+- `global_metrics.csv`: all shared, CPU, GPU, vLLM, memory, bandwidth, and AVT effective-frequency metrics.
+- `cpu_metrics.csv`: CPU, memory, memory bandwidth, and AVT effective-frequency summaries.
+- `gpu_metrics.csv`: GPU utilization, GPU memory bandwidth utilization, and GPU memory usage summaries.
+- `vllm_metrics.csv`: vLLM serving metrics such as TTFT, TPOT, tokens, and per-task LLM timing.
+
+Each of these tables includes shared context fields such as `status`, submitted/successful/failed/timeout
+task counts, `success_rate`, `E2E_p90_seconds`, `TTFT_p90`, `TPOT_p90`, run paths, CPU affinity,
+vLLM affinity, and `task_timeout`. Operational provenance files such as `manifest.csv`, `summary_by_concurrency.csv`,
+and `aggregate_samples.csv` may still be present, but downstream metric analysis should use `global_metrics.csv`
+or one of the three domain metrics views.
+
 ## Agentic Throughput And Efficiency Metrics
 
 Agentic AI benchmark analysis should focus on successful work, not just raw model generation. In the standard
@@ -100,6 +113,22 @@ successful_agents / watt = successful_tasks / average_power_watts
 Use `successful_total_tokens / second` to compare end-to-end agentic throughput, `successful_total_tokens / watt`
 to compare token-level energy efficiency, and `successful_agents / watt` to compare task-success efficiency.
 For energy-normalized reporting, use the same successful numerator divided by total joules instead of average watts.
+
+For high-concurrency sweeps, raise the open-file limit before launching the run:
+
+```bash
+ulimit -n 1048576
+```
+
+This prevents `Too many open files` while spawning hundreds of worker processes.
+
+For the 5090 server profile, use fixed CPU affinity for every sweep point:
+
+- vLLM: Linux CPUs `0-7`
+- agents: Linux CPUs `8-760`
+
+Each agent worker is intended to consume one CPU from the agent CPU set. Record both `agent_cpuset`
+and `vllm_cpuset` in the standard metrics tables.
 
 ## Memory Bandwidth Metrics
 
@@ -126,6 +155,32 @@ The global CSV includes:
 - `memory_bandwidth_read_max_gbps`
 - `memory_bandwidth_write_p90_gbps`
 - `memory_bandwidth_write_max_gbps`
+
+## AVT Effective Frequency Metrics
+
+Agent effective-frequency metrics are sampled with:
+
+```bash
+/opt/AMD/AVT/AVTCMD -module pmm "get_cstates()"
+```
+
+Linux CPU IDs are mapped to AVT `Pkg/Die/CCD/PhysicalCore` keys through:
+
+1. `/sys/devices/system/cpu/cpuN/topology/physical_package_id`
+2. `/sys/devices/system/cpu/cpuN/topology/core_id`
+3. `AMDCpuTopology` `Package/Core`
+4. local CCX core index used by AVT
+
+The runset stores:
+
+- `linux_cpu_to_avt_mapping.csv`: Linux CPU to AVT core mapping.
+- `cpu_freq/*.aggregate.csv`: sampled aggregate AVT effective-frequency metrics per sweep point.
+- `per_core_freq/*.per_core.csv`: sampled per-Linux-CPU AVT metrics per sweep point.
+
+The runset-level `cpu_metrics.csv` merges shared run context, `cpu_memory.csv`, and AVT aggregate fields such as
+`agent_eff_freq_avg_mhz`, `agent_eff_freq_p95_mhz`, `agent_freq_avg_mhz`, and `agent_c0_avg_percent`.
+The runset-level `global_metrics.csv` merges those CPU metrics with GPU metrics, vLLM serving metrics,
+and all general benchmark fields from `global_summary.csv`.
 
 ## Success Criteria
 

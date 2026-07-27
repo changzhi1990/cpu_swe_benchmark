@@ -143,6 +143,81 @@ def test_aggregate_runs_reports_llm_token_totals_and_throughput():
     assert summary.avg_total_tokens_per_task == 150.0
 
 
+def test_aggregate_runs_prefers_reported_total_tokens_when_available():
+    summary = aggregate_runs(
+        [
+            make_run(
+                "r1",
+                model_call_log=[
+                    {"status": "completed", "prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 135},
+                    {"status": "completed", "prompt_tokens": 80, "completion_tokens": 10, "total_tokens": 95},
+                ],
+            ),
+            make_run(
+                "r2",
+                model_call_log=[
+                    {"status": "completed", "prompt_tokens": 60, "completion_tokens": 30},
+                    {"status": "error", "prompt_tokens": 999, "completion_tokens": 999, "total_tokens": 1998},
+                ],
+            ),
+        ],
+        workload="sorting",
+        concurrency=2,
+        model="qwen2.5-coder-32b",
+        base_url="http://localhost:8000/v1",
+        vllm_topology="tp8",
+        batch_wall_time_seconds=10.0,
+    )
+
+    assert summary.llm_input_tokens_total == 240
+    assert summary.llm_output_tokens_total == 60
+    assert summary.llm_total_tokens_total == 320
+    assert summary.llm_total_tokens_per_sec == 32.0
+    assert summary.avg_total_tokens_per_task == 160.0
+
+
+def test_aggregate_runs_reports_successful_agent_tokens_from_successful_runs_only():
+    summary = aggregate_runs(
+        [
+            make_run(
+                "success-1",
+                status="success",
+                model_call_log=[
+                    {"status": "completed", "prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 999},
+                    {"status": "completed", "prompt_tokens": 80, "completion_tokens": 10, "total_tokens": 999},
+                ],
+            ),
+            make_run(
+                "success-2",
+                status="success",
+                model_call_log=[
+                    {"status": "completed", "prompt_tokens": 60, "completion_tokens": 30},
+                    {"status": "error", "prompt_tokens": 999, "completion_tokens": 999},
+                ],
+            ),
+            make_run(
+                "failed-1",
+                status="validation_failed",
+                model_call_log=[
+                    {"status": "completed", "prompt_tokens": 1000, "completion_tokens": 2000},
+                ],
+            ),
+        ],
+        workload="sorting",
+        concurrency=100,
+        model="qwen2.5-coder-32b",
+        base_url="http://localhost:8000/v1",
+        vllm_topology="tp8",
+        batch_wall_time_seconds=10.0,
+    )
+
+    assert summary.successful_agent_input_tokens_total == 240
+    assert summary.successful_agent_output_tokens_total == 60
+    assert summary.successful_agent_total_tokens_total == 300
+    assert summary.successful_agent_total_tokens_per_sec == 30.0
+    assert summary.avg_total_tokens_per_successful_agent == 150.0
+
+
 def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
     summary = aggregate_runs(
         [
@@ -202,6 +277,39 @@ def test_write_global_csv_includes_e2e_ttft_and_tpot_p90_columns(tmp_path):
     assert values["gpu_memory_bandwidth_util_avg_percent"] == "30.000000"
     assert values["gpu_memory_bandwidth_util_p90_percent"] == "40.000000"
     assert values["gpu_memory_bandwidth_util_max_percent"] == "50.000000"
+
+
+def test_write_global_csv_includes_successful_agent_token_columns(tmp_path):
+    summary = aggregate_runs(
+        [
+            make_run(
+                "success-1",
+                status="success",
+                model_call_log=[{"status": "completed", "prompt_tokens": 100, "completion_tokens": 20}],
+            ),
+            make_run(
+                "failed-1",
+                status="validation_failed",
+                model_call_log=[{"status": "completed", "prompt_tokens": 1000, "completion_tokens": 2000}],
+            ),
+        ],
+        workload="sorting",
+        concurrency=100,
+        model="qwen2.5-coder-32b",
+        base_url="http://localhost:8000/v1",
+        vllm_topology="tp8",
+        batch_wall_time_seconds=10.0,
+    )
+
+    csv_path = write_global_csv([summary], tmp_path)
+    header, row = csv_path.read_text(encoding="utf-8").splitlines()
+    values = dict(zip(header.split(","), row.split(",")))
+
+    assert values["successful_agent_input_tokens_total"] == "100"
+    assert values["successful_agent_output_tokens_total"] == "20"
+    assert values["successful_agent_total_tokens_total"] == "120"
+    assert values["successful_agent_total_tokens_per_sec"] == "12.000000"
+    assert values["avg_total_tokens_per_successful_agent"] == "120.000000"
 
 
 def test_merge_dcgm_metrics_overrides_system_gpu_metrics():
