@@ -2,7 +2,7 @@
 
 CPU-centric latency and throughput benchmark for latest `mini-swe-agent` with a local vLLM TP8 Qwen2.5-Coder-32B-Instruct service.
 
-The benchmark runs repo-based coding workloads across concurrency points such as `1,2,4,8,16,32,64,128`. Each concurrency point starts that many local mini-swe-agent workers once (`waves=1`) and reports task completion latency, success rate, successful-task throughput, system utilization, workload execution phase utilization, LLM serving TTFT/TPOT metrics, and AMDuProfPcm memory bandwidth metrics.
+The benchmark runs repo-based coding workloads across concurrency points such as `1,2,4,8,16,32,64,128`. Each concurrency point starts that many local mini-swe-agent workers once (`waves=1`) and reports task completion latency, success rate, successful-task throughput, system utilization, workload execution phase utilization, LLM serving TTFT/TPOT metrics, GPU metrics, and CPU memory bandwidth metrics on AMD or Intel systems.
 
 ## Workloads
 
@@ -68,7 +68,7 @@ python3 benchmark_latency.py \
 
 Each `(workload, concurrency)` point writes:
 
-- `summary.json`: success rate, completion rate, throughput, latency percentiles, LLM/bash timing breakdown, TTFT/TPOT metrics, and AMDuProfPcm memory bandwidth metrics when available.
+- `summary.json`: success rate, completion rate, throughput, latency percentiles, LLM/bash timing breakdown, TTFT/TPOT metrics, GPU metrics, and AMD/Intel memory bandwidth metrics when available.
 - `runs.jsonl`: one JSON object per agent run.
 - `runs/<run_id>/trajectory.json`: mini-swe-agent trajectory when available.
 - `runs/<run_id>/run_result.json`: full per-run benchmark record.
@@ -132,20 +132,30 @@ and `vllm_cpuset` in the standard metrics tables.
 
 ## Memory Bandwidth Metrics
 
-Each concurrency point starts AMDuProfPcm around the point execution and parses system-level memory bandwidth from the generated `report.csv`.
+Each concurrency point starts a CPU memory bandwidth sampler around the point execution. The sampler chooses the implementation from the host CPU and available tools:
 
-Default AMDuProfPcm command:
+1. AMD systems use AMDuProfPcm when `AMDuProfPcm` exists at the configured path.
+2. Intel systems use Linux `perf stat` uncore IMC counters when `perf` and `/sys/devices/uncore_imc_*` events are available.
+
+The AMD command is:
 
 ```bash
-/home/user/zhi/AMDuProf_Nda_Linux_x64_5.0.1479/bin/AMDuProfPcm \
-  top --msr -r -m memory -a -I 1000
+/home/user/zhi/AMDuProf_Nda_Linux_x64_5.0.1479/bin/AMDuProfPcm top --msr -r -m memory -a -I 1000
 ```
 
-`--msr` requires sudo. For unattended benchmark runs, provide the sudo password through:
+The Intel command is:
+
+```bash
+perf stat -a -I 1000 -e uncore_imc/cas_count_read_sch0/,uncore_imc/cas_count_write_sch0/,uncore_imc/cas_count_read_sch1/,uncore_imc/cas_count_write_sch1/
+```
+
+Both paths may require sudo for MSR or perf event access. For unattended benchmark runs, provide the sudo password only in the current shell:
 
 ```bash
 export AMDUPROFPCM_SUDO_PASSWORD=...
 ```
+
+The variable name is retained for backward compatibility; it is also used for the Intel `perf` sampler. The selected collector source is recorded in each point `summary.json` as `memory_bandwidth_source`, with values such as `amd_pcm_top`, `amd_pcm_report`, or `intel_perf_uncore_imc`.
 
 The global CSV includes:
 
@@ -155,6 +165,8 @@ The global CSV includes:
 - `memory_bandwidth_read_max_gbps`
 - `memory_bandwidth_write_p90_gbps`
 - `memory_bandwidth_write_max_gbps`
+
+Sampler logs are stored under each concurrency point in the `amd_pcm/` directory for compatibility with existing result parsers. On Intel hosts these files contain `perf stat` stdout/stderr logs.
 
 ## AVT Effective Frequency Metrics
 
@@ -187,9 +199,21 @@ and all general benchmark fields from `global_summary.csv`.
 A run is successful only if:
 
 1. mini-swe-agent exits with `Submitted`, and
-2. at least one executed command output contains `VALIDATION_PASSED`.
+2. the benchmark harness re-runs the workload validation command in the final worker workspace and it exits with status code `0`.
 
-This prevents a model from submitting without actually running the workload validation.
+For `algorithm_lab_sorting_bugfix`, the harness validation is:
+
+```bash
+PYTHONPATH=src python -m pytest tests/test_sorting.py
+```
+
+For `memory_lab_bandwidth_bugfix`, the harness validation is:
+
+```bash
+PYTHONPATH=src python -m pytest tests/test_bandwidth.py
+```
+
+The agent prompt still asks the model to print `VALIDATION_PASSED` after its own validation, but final success is based on the harness-side pytest result. This avoids false positives from a model echoing the marker without passing tests and false negatives caused by the worker shell using a Python executable without pytest installed.
 
 ## Dashboard
 

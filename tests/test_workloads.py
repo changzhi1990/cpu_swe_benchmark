@@ -19,6 +19,18 @@ def test_get_workload_prompt_contains_validation_marker_and_submit_command():
     assert str(workload.command_timeout_seconds) in prompt
 
 
+def test_algorithm_lab_sorting_prompt_contains_ordering_hard_constraints():
+    workload = get_workload("algorithm_lab_sorting_bugfix")
+    prompt = workload.render_prompt()
+
+    assert "Sorting-specific hard constraints" in prompt
+    assert "arr[j] > arr[j + 1]" in prompt
+    assert "Do not add nested contradictory comparisons" in prompt
+    assert "pytest still shows descending output" in prompt
+    assert "Do not combine source edits and pytest in the same bash command" in prompt
+    assert "After any command that edits files under `src/`, wait for the next assistant step before running pytest" in prompt
+
+
 def test_memory_lab_bandwidth_bugfix_prompt_describes_streaming_memory_workload():
     workload = get_workload("memory_lab_bandwidth_bugfix")
     prompt = workload.render_prompt()

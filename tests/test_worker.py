@@ -1,5 +1,9 @@
+import os
+import sys
+from pathlib import Path
+
 from cpu_swe_benchmark.schemas import RunResult, to_jsonable
-from cpu_swe_benchmark.worker import DEFAULT_AGENT_STEP_LIMIT
+from cpu_swe_benchmark.worker import DEFAULT_AGENT_STEP_LIMIT, _set_cpu_env
 
 
 def test_worker_default_agent_step_limit_allows_debug_fix_validate_submit_loop():
@@ -28,3 +32,12 @@ def test_run_result_serializes_task_total_tokens():
     )
 
     assert to_jsonable(result)["total_tokens"] == 135
+
+
+def test_worker_env_puts_current_python_bin_first(monkeypatch):
+    monkeypatch.setenv("PATH", "/usr/bin")
+
+    _set_cpu_env(1)
+
+    first_path = os.environ["PATH"].split(os.pathsep)[0]
+    assert first_path == str(Path(sys.executable).resolve().parent)

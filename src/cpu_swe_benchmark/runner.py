@@ -9,7 +9,7 @@ from cpu_swe_benchmark.amd_pcm import AMDuProfPcmMemorySampler
 from cpu_swe_benchmark.aggregate import aggregate_runs
 from cpu_swe_benchmark.dcgm_sampler import DCGMGPUSampler
 from cpu_swe_benchmark.schemas import ConcurrencySummary, RunResult, to_jsonable
-from cpu_swe_benchmark.system_metrics import read_basic_system_metrics
+from cpu_swe_benchmark.system_metrics import read_system_metrics
 from cpu_swe_benchmark.system_sampler import SystemSampler
 from cpu_swe_benchmark.worker import WorkerConfig, run_worker
 from cpu_swe_benchmark.workloads import Workload
@@ -77,7 +77,7 @@ def run_concurrency_point(
     batch_start = time.time()
     futures: list[concurrent.futures.Future[RunResult]] = []
     results: list[RunResult] = []
-    sampler = SystemSampler(interval_seconds=1.0, metrics_reader=read_basic_system_metrics)
+    sampler = SystemSampler(interval_seconds=1.0, metrics_reader=read_system_metrics)
     pcm_sampler = AMDuProfPcmMemorySampler(point_dir / "amd_pcm")
     dcgm_sampler = DCGMGPUSampler(point_dir / "dcgm")
     sampler.start()

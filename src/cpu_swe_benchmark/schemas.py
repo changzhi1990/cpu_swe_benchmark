@@ -58,6 +58,7 @@ class RunResult:
     command_timeout_seconds: int = 120
     model_call_log: list[dict[str, Any]] = field(default_factory=list)
     bash_execution_log: list[dict[str, Any]] = field(default_factory=list)
+    harness_validation_log: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

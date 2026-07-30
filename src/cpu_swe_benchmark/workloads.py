@@ -28,10 +28,21 @@ Instructions:
    directly, when editing source code. Avoid sed regex replacements for lines
    containing characters like [] because regex escaping can make the edit a
    no-op.
-8. Re-run PYTHONPATH=src python3 -m pytest tests/test_sorting.py.
-9. Confirm the tests exercise sorting arrays of sizes 10000 and 20000.
-10. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_sorting.py && echo VALIDATION_PASSED
-11. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
+8. Sorting-specific hard constraints:
+   - Before editing, inspect `src/algorithm_lab/sorting.py` and
+     `tests/test_sorting.py`.
+   - For ascending bubble sort, swap adjacent items only when the left item is greater than the right item: `arr[j] > arr[j + 1]`.
+   - Do not add nested contradictory comparisons for the same pair, such as
+     checking both `arr[j] < arr[j + 1]` and `arr[j] > arr[j + 1]` in the same
+     branch.
+   - If pytest still shows descending output, re-check the comparison operator
+     before changing the swap assignment.
+   - Do not combine source edits and pytest in the same bash command.
+   - After any command that edits files under `src/`, wait for the next assistant step before running pytest.
+9. Re-run PYTHONPATH=src python3 -m pytest tests/test_sorting.py.
+10. Confirm the tests exercise sorting arrays of sizes 10000 and 20000.
+11. After the tests pass, run: PYTHONPATH=src python3 -m pytest tests/test_sorting.py && echo VALIDATION_PASSED
+12. Finish by running: echo COMPLETE_TASK_AND_SUBMIT_FINAL_OUTPUT
 
 Requirements:
 - Preserve the public function name bubble_sort.

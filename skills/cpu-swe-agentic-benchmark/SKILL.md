@@ -1,6 +1,6 @@
 ---
 name: cpu-swe-agentic-benchmark
-description: Use when running, maintaining, analyzing, troubleshooting, or publishing the CPU SWE agentic AI benchmark standard on a GPU server, including algorithm_lab_sorting_bugfix, memory_lab_bandwidth_bugfix, all-workload suite runs, mini-swe-agent, vLLM or OpenAI-compatible model serving, concurrency sweeps, TTFT/TPOT/E2E/success metrics, system metrics, AMDuProfPcm memory bandwidth, and GitHub sync for cpu_swe_benchmark.
+description: Use when running, maintaining, analyzing, troubleshooting, or publishing the CPU SWE agentic AI benchmark standard on a GPU server, including algorithm_lab_sorting_bugfix, memory_lab_bandwidth_bugfix, all-workload suite runs, mini-swe-agent, vLLM or OpenAI-compatible model serving, concurrency sweeps, TTFT/TPOT/E2E/success metrics, system metrics, AMD/Intel CPU memory bandwidth, AMDuProfPcm, Intel perf uncore IMC, and GitHub sync for cpu_swe_benchmark.
 ---
 
 # CPU SWE Agentic Benchmark
@@ -20,7 +20,7 @@ Confirm or set these before running a benchmark:
 | `MODEL` | `qwen2.5-coder-32b` | served model name |
 | `API_KEY` | `token-abc123` | model API key |
 | `DASHBOARD_HEALTH` | `http://localhost:8080/api/health` | metrics health endpoint |
-| `AMDUPROFPCM_PATH` | `/home/user/zhi/AMDuProf_Nda_Linux_x64_5.0.1479/bin/AMDuProfPcm` | memory bandwidth tool |
+| `AMDUPROFPCM_PATH` | `/home/user/zhi/AMDuProf_Nda_Linux_x64_5.0.1479/bin/AMDuProfPcm` | AMD memory bandwidth tool; Intel hosts fall back to `perf` uncore IMC events |
 | `RUN_LABEL` | `qwen32b_tp8` | output directory label |
 
 Do not commit benchmark artifacts: `results/`, `logs/`, `__pycache__/`, `.pytest_cache/`, or copied worker workspaces. Do not store passwords, GitHub tokens, or sudo passwords in files.
@@ -48,6 +48,17 @@ Use `successful_agent_total_tokens_total` as the standard CSV field for successf
 When reporting watt-normalized metrics, state whether the denominator is average GPU power, CPU package power,
 or average system power, and measure it over the same batch window as `batch_wall_time_seconds`.
 
+## Memory Bandwidth Collector Selection
+
+The benchmark memory bandwidth sampler supports both AMD and Intel hosts:
+
+- AMD: use `AMDuProfPcm top --msr -r -m memory -a -I 1000` when the configured `AMDUPROFPCM_PATH` exists.
+- Intel: use `perf stat -a -I 1000` with `uncore_imc/cas_count_read_sch*` and `uncore_imc/cas_count_write_sch*` events when AMDuProfPcm is unavailable and Intel uncore IMC events exist.
+
+Use `AMDUPROFPCM_SUDO_PASSWORD` only in the current shell for unattended sampling that requires sudo. The name is retained for compatibility and is used by both AMD AMDuProfPcm and Intel perf paths. Do not store sudo passwords in files.
+
+`memory_bandwidth_source` identifies the selected path in each point `summary.json`; expected values include `amd_pcm_top`, `amd_pcm_report`, and `intel_perf_uncore_imc`. Numeric bandwidth fields use the existing `memory_bandwidth_*_gbps` names. On Intel hosts the sampler logs still live under the per-point `amd_pcm/` directory for backward-compatible result parsing, but the contents are `perf stat` stdout/stderr.
+
 ## Standard Run Workflow
 
 1. Identify the target GPU server and server profile. Do not assume any fixed GPU model, host path, endpoint, or model name.
@@ -55,7 +66,7 @@ or average system power, and measure it over the same batch window as `batch_wal
 3. Confirm the requested benchmark type is one of the standard types above.
 4. Check no stale benchmark or AMDuProfPcm process is running.
 5. Verify or start the model server and dashboard metrics for this server profile.
-6. Set `AMDUPROFPCM_SUDO_PASSWORD` only in the current shell when AMDuProfPcm needs sudo.
+6. Set `AMDUPROFPCM_SUDO_PASSWORD` only in the current shell when AMDuProfPcm or Intel `perf` memory-bandwidth sampling needs sudo.
 7. Run the requested sweep with `scripts/run_benchmark_sweep.sh` from this skill or with `benchmark_latency.py` directly.
 8. Wait for completion; do not report success before verification.
 9. Summarize runsets with `scripts/aggregate_standard_metrics.py` so `global_metrics.csv`, `cpu_metrics.csv`, `gpu_metrics.csv`, and `vllm_metrics.csv` exist.
@@ -106,7 +117,7 @@ Before claiming a benchmark run is complete, verify:
 - runset `global_metrics.csv`, `cpu_metrics.csv`, `gpu_metrics.csv`, and `vllm_metrics.csv` exist with one row per requested concurrency
 - each standard metrics table includes task counts, `success_rate`, `E2E_p90_seconds`, `TTFT_p90`, `TPOT_p90`, run paths, CPU affinity, vLLM affinity, and task timeout
 - TTFT/TPOT/E2E metrics are present and nonzero for successful model runs
-- memory bandwidth fields are present when AMDuProfPcm ran
+- memory bandwidth fields are present when the AMD/Intel memory-bandwidth sampler ran
 - AVT effective-frequency fields are present in `cpu_metrics.csv` when AVT sampling ran
 - CPU, GPU, vLLM, and general benchmark fields are all present in `global_metrics.csv`
 - benchmark log has no traceback, connection refused, EngineDeadError, CUDA OOM, or unexpected failures

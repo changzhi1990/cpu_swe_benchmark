@@ -2,8 +2,10 @@ from pathlib import Path
 
 from cpu_swe_benchmark.amd_pcm import (
     build_amd_pcm_command,
+    build_intel_perf_memory_command,
     parse_amd_pcm_memory_report,
     parse_amd_pcm_top_output,
+    parse_intel_perf_memory_output,
 )
 
 
@@ -71,3 +73,32 @@ Total Mem WrBw (GB/s)  |            10.0 |            5.0 |            5.0 |
     assert metrics["memory_bandwidth_read_max_gbps"] == 20.0
     assert metrics["memory_bandwidth_write_p90_gbps"] == 10.0
     assert metrics["memory_bandwidth_write_max_gbps"] == 10.0
+
+
+def test_build_intel_perf_memory_command_uses_uncore_imc_events():
+    command = build_intel_perf_memory_command("/usr/bin/perf")
+
+    assert command[:5] == ["/usr/bin/perf", "stat", "-a", "-I", "1000"]
+    assert "uncore_imc/cas_count_read_sch0/" in command[-1]
+    assert "uncore_imc/cas_count_write_sch1/" in command[-1]
+
+
+def test_parse_intel_perf_memory_output_returns_bandwidth_stats():
+    output = """
+#           time             counts unit events
+     1.000000000             512.00 MiB  uncore_imc/cas_count_read_sch0/
+     1.000000000             512.00 MiB  uncore_imc/cas_count_write_sch0/
+     1.000000000             512.00 MiB  uncore_imc/cas_count_read_sch1/
+     1.000000000             512.00 MiB  uncore_imc/cas_count_write_sch1/
+     2.000000000            1024.00 MiB  uncore_imc/cas_count_read_sch0/
+     2.000000000             512.00 MiB  uncore_imc/cas_count_write_sch0/
+     2.000000000            1024.00 MiB  uncore_imc/cas_count_read_sch1/
+     2.000000000             512.00 MiB  uncore_imc/cas_count_write_sch1/
+"""
+
+    metrics = parse_intel_perf_memory_output(output)
+
+    assert metrics["memory_bandwidth_read_max_gbps"] == 2.0
+    assert metrics["memory_bandwidth_write_max_gbps"] == 1.0
+    assert metrics["memory_bandwidth_total_max_gbps"] == 3.0
+    assert metrics["memory_bandwidth_total_p90_gbps"] == 3.0

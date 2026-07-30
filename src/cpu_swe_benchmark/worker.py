@@ -12,7 +12,7 @@ from cpu_swe_benchmark.instrumented_environment import InstrumentedEnvironment
 from cpu_swe_benchmark.repo_workloads import copy_repo_template
 from cpu_swe_benchmark.schemas import RunResult, to_jsonable
 from cpu_swe_benchmark.system_sampler import summarize_system_samples
-from cpu_swe_benchmark.validation import classify_run
+from cpu_swe_benchmark.validation import classify_run, run_harness_validation
 from cpu_swe_benchmark.vllm_text_model import VLLMTextModel
 from cpu_swe_benchmark.workloads import Workload
 
@@ -44,6 +44,15 @@ class WorkerConfig:
     model_temperature: float
 
 
+def _prepend_path(prefix: str, value: str) -> str:
+    if not value:
+        return prefix
+    parts = value.split(os.pathsep)
+    if parts and parts[0] == prefix:
+        return value
+    return os.pathsep.join([prefix, *parts])
+
+
 def _set_cpu_env(threads: int):
     value = str(threads)
     os.environ["OMP_NUM_THREADS"] = value
@@ -51,6 +60,20 @@ def _set_cpu_env(threads: int):
     os.environ["OPENBLAS_NUM_THREADS"] = value
     os.environ["NUMEXPR_NUM_THREADS"] = value
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
+    python_bin = str(Path(sys.executable).resolve().parent)
+    os.environ["PATH"] = _prepend_path(python_bin, os.environ.get("PATH", ""))
+
+
+def _worker_command_env(threads: int) -> dict[str, str]:
+    value = str(threads)
+    return {
+        "OMP_NUM_THREADS": value,
+        "MKL_NUM_THREADS": value,
+        "OPENBLAS_NUM_THREADS": value,
+        "NUMEXPR_NUM_THREADS": value,
+        "TOKENIZERS_PARALLELISM": "false",
+        "PATH": os.environ.get("PATH", ""),
+    }
 
 
 def _ensure_mini_swe_agent_path(path: Path):
@@ -87,13 +110,7 @@ def run_worker(config: WorkerConfig) -> RunResult:
 
         local_env = LocalEnvironment(
             cwd=str(workspace),
-            env={
-                "OMP_NUM_THREADS": str(config.cpu_threads_per_worker),
-                "MKL_NUM_THREADS": str(config.cpu_threads_per_worker),
-                "OPENBLAS_NUM_THREADS": str(config.cpu_threads_per_worker),
-                "NUMEXPR_NUM_THREADS": str(config.cpu_threads_per_worker),
-                "TOKENIZERS_PARALLELISM": "false",
-            },
+            env=_worker_command_env(config.cpu_threads_per_worker),
             timeout=config.command_timeout_seconds,
         )
         env = InstrumentedEnvironment(local_env)
@@ -117,6 +134,23 @@ def run_worker(config: WorkerConfig) -> RunResult:
     status = classify_run(exit_status, command_outputs, error)
     if status == "exception" and error and "TimeExceeded" in error:
         status = "timeout"
+
+    harness_validation_log = {}
+    if error is None and exit_status == "Submitted":
+        harness_validation_log = run_harness_validation(
+            config.workload.name,
+            workspace,
+            timeout_seconds=config.command_timeout_seconds,
+            python_executable=sys.executable,
+        )
+        validation_status = harness_validation_log.get("status")
+        if validation_status == "passed":
+            status = "success"
+        elif validation_status == "failed":
+            status = "validation_failed"
+        elif validation_status == "timeout":
+            status = "timeout"
+
     llm_time = sum(float(call.get("duration_seconds", 0.0)) for call in model.call_log)
     bash_log = env.execution_log if env else []
     bash_time = sum(float(entry.get("duration_seconds", 0.0)) for entry in bash_log)
@@ -156,6 +190,7 @@ def run_worker(config: WorkerConfig) -> RunResult:
         command_timeout_seconds=config.command_timeout_seconds,
         model_call_log=model.call_log,
         bash_execution_log=bash_log,
+        harness_validation_log=harness_validation_log,
     )
     (config.run_dir / "run_result.json").write_text(json.dumps(to_jsonable(run_result), indent=2), encoding="utf-8")
     return run_result

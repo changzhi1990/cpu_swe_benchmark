@@ -19,6 +19,13 @@ def test_algorithm_lab_sorting_bugfix_workload_points_to_repo_template():
     assert "CPU-intensive" in prompt
     assert "Python script" in prompt
     assert "sed regex" in prompt
+    assert "Sorting-specific hard constraints" in prompt
+    assert "swap adjacent items only when the left item is greater than the right item" in prompt
+    assert "`arr[j] > arr[j + 1]`" in prompt
+    assert "Do not add nested contradictory comparisons" in prompt
+    assert "If pytest still shows descending output" in prompt
+    assert "Do not combine source edits and pytest in the same bash command" in prompt
+    assert "wait for the next assistant step before running pytest" in prompt
     assert "Create exactly one Python file" not in prompt
     assert "benchmark_algorithm_lab_sorting_bugfix.py" not in prompt
     assert "Do not create replacement benchmark scripts" in prompt
